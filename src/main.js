@@ -32,6 +32,15 @@ game.load((p, txt) => {
   loaded = true;
   startBtn.disabled = false;
   if (TEST) begin();
+  if (params.has('selftest')) {
+    // Launcher-Selbsttest: Spiel starten, einen Moment laufen lassen, Canvas-Bild an den lokalen Launcher senden
+    begin();
+    setTimeout(() => {
+      game.render(0.016);
+      const img = game.renderer.domElement.toDataURL('image/jpeg', 0.85);
+      fetch('/__shot', { method: 'POST', body: img }).catch(() => {});
+    }, 5000);
+  }
 }).catch((e) => { console.error(e); startBtn.textContent = 'Fehler beim Laden – siehe Konsole'; });
 
 function begin() {
@@ -95,6 +104,13 @@ for (const id of ['opt-quality', 'opt-sens', 'opt-fov', 'opt-vol', 'opt-voice', 
 let last = performance.now(), fpsAcc = 0, fpsN = 0;
 const fpsEl = $('fps');
 fpsEl.style.display = TEST ? 'block' : 'none';
+addEventListener('keydown', (e) => {
+  if (e.code === 'F11') {
+    e.preventDefault();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen().catch(() => {});
+  }
+});
 addEventListener('keydown', (e) => { if (e.code === 'F3') fpsEl.style.display = fpsEl.style.display === 'none' ? 'block' : 'none'; });
 function frame(now) {
   requestAnimationFrame(frame);

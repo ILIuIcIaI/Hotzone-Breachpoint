@@ -12,7 +12,7 @@ Ein taktischer SWAT-Shooter für Windows. Langsam, methodisch, tödlich: Räume 
 
 > Die .exe ist nicht signiert. Windows SmartScreen zeigt deshalb beim ersten Start eventuell eine Warnung: **Weitere Informationen → Trotzdem ausführen**.
 
-Es wird nichts installiert, nichts ins Internet gesendet und kein Browser benötigt. Das Spiel läuft in einem eigenen Fenster (F11 schaltet auf Vollbild).
+Das Spiel läuft in einem eigenen Programmfenster (F11 schaltet auf Vollbild). Der Download ist nur etwa 0,2 MB groß, weil die kleine `HotzoneBreachpoint.exe` die **WebView2-Komponente** nutzt, die in Windows 11 bereits eingebaut ist. Unter Windows 10 kann man sie bei Bedarf kostenlos bei Microsoft nachinstallieren. Es wird nichts installiert und nichts ins Internet gesendet: Die Spieldateien werden nur lokal (127.0.0.1) an das Fenster übergeben.
 
 ## Der Einsatz: Operation Kalte Bilanz
 
@@ -98,12 +98,14 @@ Voraussetzung: Node.js 20+.
 
 ```bash
 npm install
-npm run dev      # Entwicklung im Browser unter http://localhost:5180
-npm start        # als Desktop-App starten
-npm run pack     # Windows-Build nach release/
+npm run dev      # Entwicklung unter http://localhost:5180
+npm start        # Entwicklungs-Desktopfenster (Electron)
+npm run pack     # Windows-Release (WebView2-Launcher) nach release/
 ```
 
-Aufbau: `src/world` (Karte, Kollision, Licht-Baking, Navigation), `src/actors` (Skelett/IK, Ragdoll, KI), `src/player` (Steuerung, Waffenmodell), `src/fx` (Effekte, Nachbearbeitung), `src/engine` (Texturen, Materialien, Audio, Sprache), `electron/` (Desktop-Hülle).
+`npm run pack` kompiliert den Launcher mit dem in Windows enthaltenen C#-Compiler (.NET Framework 4); weitere Werkzeuge sind dafür nicht nötig.
+
+Aufbau: `src/world` (Karte, Kollision, Licht-Baking, Navigation), `src/actors` (Skelett/IK, Ragdoll, KI), `src/player` (Steuerung, Waffenmodell), `src/fx` (Effekte, Nachbearbeitung), `src/engine` (Texturen, Materialien, Audio, Sprache), `launcher/` (Windows-Launcher), `electron/` (Entwicklungsfenster).
 
 ## Stand
 

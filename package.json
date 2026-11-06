@@ -11,7 +11,8 @@
     "build": "vite build",
     "start": "vite build && electron .",
     "electron": "electron .",
-    "pack": "vite build && node tools/make-icon.cjs && node tools/pack.cjs"
+    "pack": "vite build && node tools/make-icon.cjs && node tools/pack-win.cjs",
+    "pack:electron": "vite build && node tools/make-icon.cjs && node tools/pack.cjs"
   },
   "dependencies": {
     "three": "0.187.0"
