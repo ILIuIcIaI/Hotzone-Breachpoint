@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hotzone Breachpoint</title>
+<style>
+  :root { --acc: #e8b04a; --acc2: #4fb3ff; --txt: #d9dde3; --dim: #8a929c; --bg: rgba(8,11,15,.86); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #05070a; color: var(--txt);
+    font-family: "Segoe UI", "Bahnschrift", system-ui, sans-serif; user-select: none; }
+  canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .layer { position: fixed; inset: 0; pointer-events: none; }
+  .hidden { display: none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud .dot { position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px;
+    background: rgba(255,255,255,.75); border-radius: 50%; box-shadow: 0 0 2px #000; transition: opacity .15s; }
+  #prompt { position: absolute; left: 50%; top: 60%; transform: translateX(-50%); font-size: 15px; letter-spacing: .04em;
+    text-shadow: 0 1px 3px #000; text-align: center; }
+  #prompt b { color: var(--acc); border: 1px solid rgba(232,176,74,.6); padding: 1px 6px; border-radius: 3px; margin-right: 6px; }
+  #progress { position: absolute; left: 50%; top: calc(60% + 26px); width: 160px; height: 3px; margin-left: -80px; background: rgba(255,255,255,.15); }
+  #progress i { display: block; height: 100%; width: 0; background: var(--acc); }
+  #weapon { position: absolute; right: 34px; bottom: 30px; text-align: right; text-shadow: 0 1px 3px #000; }
+  #weapon .name { font-size: 13px; color: var(--dim); letter-spacing: .14em; text-transform: uppercase; }
+  #weapon .mode { font-size: 12px; color: var(--acc); letter-spacing: .1em; margin-top: 2px; }
+  #weapon .mag { display: flex; gap: 3px; justify-content: flex-end; margin-top: 7px; }
+  #weapon .mag span { width: 7px; height: 16px; border: 1px solid rgba(255,255,255,.5); }
+  #weapon .mag span.f { background: rgba(255,255,255,.75); }
+  #weapon .mag span.h { background: linear-gradient(to top, rgba(255,255,255,.75) 50%, transparent 50%); }
+  #weapon .spare { font-size: 12px; color: var(--dim); margin-top: 5px; }
+  #weapon .nade { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  #health { position: absolute; left: 34px; bottom: 30px; text-shadow: 0 1px 3px #000; }
+  #health .lbl { font-size: 11px; letter-spacing: .16em; color: var(--dim); }
+  #health .bar { width: 190px; height: 4px; background: rgba(255,255,255,.12); margin-top: 6px; }
+  #health .bar i { display: block; height: 100%; background: #d6dde6; width: 100%; transition: width .2s; }
+  #health .room { font-size: 13px; margin-top: 8px; color: var(--txt); letter-spacing: .05em; }
+  #feed { position: absolute; left: 34px; top: 30px; display: flex; flex-direction: column; gap: 6px; }
+  #feed div { font-size: 14px; padding: 5px 10px; background: rgba(0,0,0,.45); border-left: 2px solid var(--acc);
+    text-shadow: 0 1px 2px #000; animation: feedin .25s ease-out; }
+  #feed div.bad { border-color: #e2554a; }
+  #feed div.info { border-color: var(--acc2); }
+  @keyframes feedin { from { opacity: 0; transform: translateX(-12px); } }
+  #objectives { position: absolute; right: 34px; top: 30px; width: 330px; background: var(--bg); padding: 14px 18px;
+    border-top: 2px solid var(--acc); font-size: 14px; }
+  #objectives h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .2em; color: var(--acc); font-weight: 600; }
+  #objectives .o { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+  #objectives .o.done { color: #7fd38a; }
+  #objectives .hint { color: var(--dim); font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  #compass { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font-size: 12px; letter-spacing: .3em;
+    color: rgba(255,255,255,.55); text-shadow: 0 1px 2px #000; }
+  #fx { position: absolute; inset: 0; }
+  #flashwhite { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #center-msg { position: absolute; left: 50%; top: 32%; transform: translateX(-50%); text-align: center; text-shadow: 0 2px 6px #000; }
+  #center-msg .big { font-size: 34px; letter-spacing: .25em; font-weight: 300; }
+  #center-msg .small { font-size: 15px; color: var(--dim); margin-top: 8px; letter-spacing: .05em; }
+
+  /* ---------- Menues ---------- */
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto;
+    background: radial-gradient(ellipse at 30% 40%, rgba(20,28,38,.72), rgba(3,4,6,.95)); }
+  .panel { width: min(980px, 92vw); display: grid; grid-template-columns: 1.15fr 1fr; gap: 34px; }
+  .title { font-size: 54px; font-weight: 200; letter-spacing: .18em; line-height: 1; margin: 0; }
+  .title b { font-weight: 700; color: var(--acc); }
+  .sub { color: var(--dim); letter-spacing: .35em; font-size: 12px; margin: 10px 0 26px; }
+  .brief { background: var(--bg); padding: 18px 22px; border-left: 2px solid var(--acc); font-size: 14px; line-height: 1.6; }
+  .brief h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: .25em; color: var(--acc); font-weight: 600; }
+  .brief ul { margin: 6px 0 0; padding-left: 18px; }
+  .btn { display: block; width: 100%; text-align: left; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12);
+    color: var(--txt); font: inherit; font-size: 16px; letter-spacing: .12em; padding: 13px 18px; margin-bottom: 10px; cursor: pointer;
+    text-transform: uppercase; transition: background .15s, border-color .15s; }
+  .btn:hover { background: rgba(232,176,74,.12); border-color: var(--acc); }
+  .btn.primary { border-color: var(--acc); color: #fff; background: rgba(232,176,74,.18); }
+  .settings { background: var(--bg); padding: 14px 18px; font-size: 13px; margin-top: 14px; }
+  .settings label { display: flex; justify-content: space-between; align-items: center; margin: 7px 0; gap: 12px; }
+  .settings select, .settings input[type=range] { width: 170px; }
+  .settings select { background: #11161c; color: var(--txt); border: 1px solid #2b333d; padding: 4px; font: inherit; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: 12.5px; color: var(--dim); margin-top: 14px; }
+  .keys b { color: var(--txt); font-weight: 600; }
+  #loading .bar { width: 340px; height: 3px; background: rgba(255,255,255,.1); margin-top: 18px; }
+  #loading .bar i { display: block; height: 100%; width: 0; background: var(--acc); transition: width .2s; }
+  #loading .txt { color: var(--dim); font-size: 13px; margin-top: 10px; letter-spacing: .08em; }
+  .debrief { width: min(640px, 92vw); background: var(--bg); padding: 26px 32px; border-top: 2px solid var(--acc); }
+  .debrief h2 { margin: 0; font-weight: 300; letter-spacing: .2em; }
+  .debrief .grade { font-size: 64px; font-weight: 700; color: var(--acc); float: right; line-height: 1; }
+  .debrief table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px; }
+  .debrief td { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .debrief td:last-child { text-align: right; }
+  #fps { position: fixed; left: 6px; top: 4px; font: 11px monospace; color: rgba(255,255,255,.4); pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="layer hidden">
+  <div id="fx"><div id="flashwhite"></div></div>
+  <div class="dot" id="dot"></div>
+  <div id="compass">N</div>
+  <div id="feed"></div>
+  <div id="prompt"></div>
+  <div id="progress" class="hidden"><i></i></div>
+  <div id="center-msg" class="hidden"><div class="big"></div><div class="small"></div></div>
+  <div id="objectives" class="hidden"></div>
+  <div id="health"><div class="lbl">VITAL</div><div class="bar"><i></i></div><div class="room"></div></div>
+  <div id="weapon"><div class="name"></div><div class="mode"></div><div class="mag"></div><div class="spare"></div><div class="nade"></div></div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="panel">
+    <div>
+      <h1 class="title">HOTZONE<br><b>BREACHPOINT</b></h1>
+      <div class="sub">TAKTISCHER ZUGRIFF · EINSATZ 01</div>
+      <div class="brief">
+        <h4>OPERATION KALTE BILANZ</h4>
+        Meridian Logistik GmbH, Verwaltungsgebäude, 02:40 Uhr. Eine bewaffnete Gruppe hat das Gebäude besetzt, nachdem ein Geldwäsche-Deal geplatzt ist.
+        Mindestens drei Angestellte werden als Geiseln festgehalten. Der Strom im Ostflügel ist ausgefallen.
+        <ul>
+          <li>Geiseln befreien</li>
+          <li>Beweismittel (Laptop im Serverraum) sichern</li>
+          <li>Alle Verdächtigen festnehmen oder neutralisieren</li>
+          <li>Zivilisten sichern (festsetzen)</li>
+        </ul>
+        <div style="margin-top:8px;color:var(--dim)">Rules of Engagement: Nur bei unmittelbarer Bedrohung schießen. Wer sich ergibt, wird festgenommen.</div>
+      </div>
+    </div>
+    <div>
+      <button class="btn primary" id="btn-start">Einsatz starten</button>
+      <button class="btn hidden" id="btn-resume">Fortsetzen</button>
+      <button class="btn hidden" id="btn-restart">Einsatz neu starten</button>
+      <div class="settings">
+        <label>Grafikqualität
+          <select id="opt-quality">
+            <option value="low">Niedrig (schwache PCs)</option>
+            <option value="medium" selected>Mittel</option>
+            <option value="high">Hoch</option>
+          </select>
+        </label>
+        <label>Mausempfindlichkeit <input id="opt-sens" type="range" min="0.2" max="3" step="0.05" value="1"></label>
+        <label>Sichtfeld (FOV) <input id="opt-fov" type="range" min="60" max="95" step="1" value="78"></label>
+        <label>Lautstärke <input id="opt-vol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+        <label>Funksprüche / Stimmen
+          <select id="opt-voice"><option value="1" selected>An</option><option value="0">Aus</option></select>
+        </label>
+        <label>Mittelpunkt (Hüfte)
+          <select id="opt-dot"><option value="1" selected>An</option><option value="0">Aus</option></select>
+        </label>
+      </div>
+      <div class="keys">
+        <b>WASD</b><span>Bewegen · <b>Shift</b> Sprinten · <b>Alt</b> Schleichen</span>
+        <b>Q / E</b><span>Lehnen links / rechts</span>
+        <b>Strg / C</b><span>Ducken (halten / umschalten)</span>
+        <b>LMB / RMB</b><span>Schießen / Zielen</span>
+        <b>R</b><span>Nachladen · <b>B</b> Feuermodus · <b>T</b> Waffenlampe</span>
+        <b>1 / 2</b><span>Karabiner / Pistole · <b>G</b> Blendgranate</span>
+        <b>F</b><span>Rufen (Hände hoch!) · halten: Festnehmen / Tür</span>
+        <b>Mausrad</b><span>Tür langsam öffnen (an der Tür) · <b>V</b> Tür eintreten</span>
+        <b>Tab</b><span>Einsatzziele · <b>Esc</b> Pause · <b>F11</b> Vollbild</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loading" class="screen hidden">
+  <div style="text-align:center">
+    <h1 class="title" style="font-size:34px">HOTZONE <b>BREACHPOINT</b></h1>
+    <div class="bar" style="margin-left:auto;margin-right:auto"><i></i></div>
+    <div class="txt">Lade…</div>
+  </div>
+</div>
+
+<div id="debrief" class="screen hidden">
+  <div class="debrief">
+    <div class="grade" id="db-grade">A</div>
+    <h2 id="db-title">EINSATZ BEENDET</h2>
+    <div id="db-sub" style="color:var(--dim);margin-top:6px"></div>
+    <table id="db-table"></table>
+    <button class="btn primary" id="db-restart">Erneut spielen</button>
+    <button class="btn" id="db-menu">Hauptmenü</button>
+  </div>
+</div>
+
+<div id="fps"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

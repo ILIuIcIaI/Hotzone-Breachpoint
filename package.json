@@ -1,0 +1,24 @@
+{
+  "name": "hotzone-breachpoint",
+  "productName": "Hotzone Breachpoint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Taktischer SWAT-Shooter",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "electron": "electron .",
+    "pack": "vite build && node tools/make-icon.cjs && node tools/pack.cjs"
+  },
+  "dependencies": {
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "18.3.6",
+    "electron": "45.2.3",
+    "vite": "8.3.6"
+  }
+}
