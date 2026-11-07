@@ -123,6 +123,9 @@ export class Effects {
     this.casings = [];
     for (let i = 0; i < this.casingMax; i++) { this.casings.push({ p: new V(0, -10, 0), v: new V(), r: new V(), w: new V(), life: 0, bounces: 0 }); }
     this.casingNext = 0;
+    // fallende leere Magazine
+    this.dropMags = [];
+    this.magMat = new THREE.MeshStandardMaterial({ color: 0x2a2724, roughness: 0.6, metalness: 0.3 });
     // Leuchtspuren
     this.tracers = [];
     const tmat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2.2, 1.2), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -139,7 +142,7 @@ export class Effects {
 
   light(pos) { const c = new THREE.Color(); this.game.baker.probe(pos.x, Math.max(0.3, pos.y), pos.z, c); return c; }
 
-  impact(fx, pos, normal, dir) {
+  impact(fx, pos, normal, dir, noDecal = false) {
     const L = this.light(pos);
     const lum = Math.min(1.5, 0.15 + (L.r + L.g + L.b) * 0.6);
     const D = this.dust, G = this.glow;
@@ -166,6 +169,7 @@ export class Effects {
       case 'plastic': base([0.3, 0.3, 0.3], 4, 1.2, 0.04, 0.6, 0.1, 2, 0.4); for (let i = 0; i < 4; i++) G.spawn(pos.x, pos.y, pos.z, nx * 2 + rr(3), ny * 2 + rr(3), nz * 2 + rr(3), 1.5, 1.2, 0.8, 1, 0.015, 0.12, 0, 9.8, 1); break;
       default: base([0.5, 0.5, 0.5], 6, 1.2, 0.07, 1.0, 0.3, 0.3, 0.45);
     }
+    if (noDecal) return;
     if (fx !== 'glass' && fx !== 'fabric') {
       const k = Math.min(1, 0.35 + lum * 0.5);
       this.holes.add(pos, normal, 0.055 + Math.random() * 0.03, _c.setRGB(k, k, k));
@@ -203,6 +207,14 @@ export class Effects {
     c.p.copy(pos); c.v.copy(vel); c.r.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
     c.w.set((Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40);
     c.life = 6; c.bounces = 0; c.rest = false;
+  }
+
+  dropMag(pos, vel, pistol) {
+    const geo = pistol ? new THREE.BoxGeometry(0.022, 0.1, 0.036) : new THREE.BoxGeometry(0.028, 0.15, 0.07);
+    const m = new THREE.Mesh(geo, this.magMat); m.castShadow = true;
+    m.position.copy(pos); this.game.scene.add(m);
+    this.dropMags.push({ m, v: vel.clone(), w: new V((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 8), rest: false, hits: 0 });
+    if (this.dropMags.length > 12) { const o = this.dropMags.shift(); this.game.scene.remove(o.m); }
   }
 
   tracer(from, to, speed = 420) {
@@ -254,6 +266,20 @@ export class Effects {
       this.casingMesh.setMatrixAt(i, _m);
     }
     this.casingMesh.instanceMatrix.needsUpdate = true;
+    // fallende leere Magazine
+    this.dropMags = [];
+    this.magMat = new THREE.MeshStandardMaterial({ color: 0x2a2724, roughness: 0.6, metalness: 0.3 });
+    for (const d of this.dropMags) {
+      if (d.rest) continue;
+      d.v.y -= 9.81 * dt; d.m.position.addScaledVector(d.v, dt);
+      d.m.rotation.x += d.w.x * dt; d.m.rotation.y += d.w.y * dt; d.m.rotation.z += d.w.z * dt;
+      if (d.m.position.y < 0.02) {
+        d.m.position.y = 0.02;
+        if (d.v.y < -0.8 && d.hits < 2) { d.hits++; this.game.audio.play('gundrop', { pos: d.m.position, vol: 0.45 / d.hits, rate: 1.3, ref: 1.5 }); }
+        d.v.y *= -0.25; d.v.x *= 0.4; d.v.z *= 0.4; d.w.multiplyScalar(0.4);
+        if (Math.abs(d.v.y) < 0.15) { d.rest = true; d.m.rotation.set(Math.PI / 2, d.m.rotation.y, 0); }
+      }
+    }
     // Leuchtspuren
     for (const t of this.tracers) {
       if (t.life <= 0) { t.m.visible = false; continue; }

@@ -146,7 +146,9 @@ export class ViewModel {
     // Magazin (eigene Gruppe fuer Nachladen)
     const mag = new THREE.Group();
     this.box(mag, 0.028, 0.15, 0.07, M.tan, 0, -0.07, 0, -0.18);
-    this.box(mag, 0.03, 0.015, 0.075, M.black, 0, -0.145, -0.012, -0.18);
+    this.box(mag, 0.029, 0.07, 0.072, M.tan, 0, -0.165, 0.004, -0.36);
+    this.box(mag, 0.03, 0.014, 0.076, M.black, 0, -0.205, 0.022, -0.36);
+    for (let i = 0; i < 4; i++) this.box(mag, 0.031, 0.004, 0.06, M.black, 0, -0.03 - i * 0.03, -0.004 + i * 0.004, -0.2);
     mag.position.set(0, 0.03, -0.125);
     g.add(mag);
     // Rotpunktvisier
@@ -160,6 +162,15 @@ export class ViewModel {
     // Waffenlampe rechts
     this.cyl(g, 0.014, 0.1, M.black, 0.038, 0.098, -0.45, 12);
     this.part(g, new THREE.CircleGeometry(0.012, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 2.5, 2.2) }), 0.038, 0.098, -0.5011, 0, Math.PI, 0);
+    // Details: Magazinschacht, Staubschutz, Schliesshilfe, Klappvisiere, Riemenbuegel
+    this.box(g, 0.058, 0.04, 0.09, M.black, 0, 0.02, -0.125);
+    this.box(g, 0.004, 0.03, 0.075, M.metal, 0.028, 0.098, -0.035);
+    this.cyl(g, 0.009, 0.025, M.metal, 0.034, 0.108, 0.015, 10);
+    this.box(g, 0.026, 0.02, 0.028, M.black, 0, 0.145, 0.045);
+    this.box(g, 0.026, 0.018, 0.026, M.black, 0, 0.143, -0.49);
+    this.box(g, 0.012, 0.016, 0.03, M.metal, -0.03, 0.08, 0.2);
+    this.box(g, 0.006, 0.01, 0.05, M.metal, 0.03, 0.14, -0.3);
+    for (let i = 0; i < 4; i++) this.box(g, 0.004, 0.006, 0.006, M.metal, 0, 0.118 - i * 0.012, -0.73);
     // Winkelgriff
     this.box(g, 0.03, 0.035, 0.06, M.black, 0, 0.052, -0.33, 0.6);
     // Muendungsfeuer
@@ -209,6 +220,10 @@ export class ViewModel {
     g.add(p1, p2, p3);
     g.visible = false;
     return g;
+  }
+  setGunTextures(T) {
+    for (const k of ['black', 'metal']) { const m = this.M[k]; m.normalMap = T.metal.normal; m.normalScale.set(0.25, 0.25); m.needsUpdate = true; }
+    const t = this.M.tan; t.normalMap = T.concrete.normal; t.normalScale.set(0.15, 0.15); t.needsUpdate = true;
   }
   setSleeveTexture(map, normal) {
     for (const k of ['sleeve', 'cuff']) { const m = this.M[k]; m.map = map; m.normalMap = normal; m.needsUpdate = true; }
@@ -276,8 +291,23 @@ export class ViewModel {
 
   buildArm() {
     const M = this.M;
-    const ug = new THREE.CylinderGeometry(0.046, 0.04, 1, 14); ug.translate(0, 0.5, 0);
-    const fg = new THREE.CylinderGeometry(0.036, 0.028, 1, 14); fg.translate(0, 0.5, 0);
+    // Aermel als Drehkoerper mit Falten (Profil r(y), y 0..1 wird auf Segmentlaenge skaliert)
+    const lathe = (prof, seg = 20) => {
+      const pts = prof.map(([r, y]) => new THREE.Vector2(r, y));
+      const g = new THREE.LatheGeometry(pts, seg);
+      // leichte Unregelmaessigkeit (Stofffalten)
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        const a = Math.atan2(z, x);
+        const w = 1 + Math.sin(a * 3 + y * 17) * 0.035 + Math.sin(a * 5 - y * 29) * 0.02;
+        p.setXYZ(i, x * w, y, z * w);
+      }
+      g.computeVertexNormals();
+      return g;
+    };
+    const ug = lathe([[0.0, -0.02], [0.05, -0.01], [0.054, 0.12], [0.05, 0.4], [0.045, 0.7], [0.043, 0.9], [0.046, 1.0], [0.0, 1.04]]);
+    const fg = lathe([[0.0, -0.02], [0.044, 0.0], [0.046, 0.12], [0.041, 0.35], [0.037, 0.55], [0.035, 0.62], [0.039, 0.66], [0.036, 0.72], [0.031, 0.86], [0.034, 0.9], [0.0, 0.92]]);
     const upper = new THREE.Mesh(ug, M.sleeve), fore = new THREE.Mesh(fg, M.sleeve);
     const cuffG = new THREE.CylinderGeometry(0.042, 0.042, 0.035, 12); cuffG.translate(0, 0.95, 0);
     const cuff = new THREE.Mesh(cuffG, M.cuff); cuff.scale.set(1, 1, 1);
@@ -301,7 +331,7 @@ export class ViewModel {
     if (G.pistol) {
       keys = [
         { t: 0, lh: L, rot: [0, 0, 0], pos: [0, 0, 0], grab: 0, mag: 'gun' },
-        { t: 0.18, lh: [-0.06, -0.1, 0.04], rot: [0.25, 0.15, 0.35], pos: [-0.02, 0.01, 0.03], grab: 1, mag: 'drop' },
+        { t: 0.18, lh: [-0.06, -0.1, 0.04], rot: [0.25, 0.15, 0.35], pos: [-0.02, 0.01, 0.03], grab: 1, mag: 'drop', snd: 'magout' },
         { t: 0.55, lh: [-0.12, -0.32, 0.12], rot: [0.25, 0.15, 0.35], pos: [-0.02, 0.01, 0.03], grab: 1, mag: 'hidden' },
         { t: 0.95, lh: [W[0] - 0.02, W[1] - 0.12, W[2] + 0.02], rot: [0.25, 0.15, 0.35], pos: [-0.02, 0.01, 0.03], grab: 1, mag: 'hand' },
         { t: 1.18, lh: [W[0] - 0.01, W[1] - 0.02, W[2]], rot: [0.28, 0.15, 0.35], pos: [-0.02, 0.0, 0.03], grab: 1, mag: 'gun', snd: 'magin' },
@@ -328,10 +358,18 @@ export class ViewModel {
         { t: dur, lh: L, rot: [0, 0, 0], pos: [0, 0, 0], grab: 0, mag: 'gun' },
       ];
     }
-    this.reload = { t: 0, dur, keys, fired: new Set() };
+    this.reload = { t: 0, dur, keys, fired: new Set(), empty };
   }
 
   startSwitch(to) { this.switchTo = to; this.switchT = 0; }
+
+  // Mechanische Stoesse waehrend des Nachladens (Magazin raus/rein, Verschluss)
+  reloadJolt(snd) {
+    if (snd === 'magout') { this.kickR.v.x -= 1.2; this.kickP.v.y -= 0.25; }
+    else if (snd === 'magin') { this.kickR.v.x += 2.2; this.kickP.v.y += 0.45; this.kickR.v.z += (Math.random() - 0.5) * 1.5; }
+    else if (snd === 'bolt') { this.kickP.v.z += 0.9; this.kickR.v.x += 1.6; this.kickR.v.y += 0.8; }
+    if (snd === 'magout' && this.reload && this.reload.empty && this.onDropMag) this.onDropMag();
+  }
 
   fireKick(gun, adsK) {
     const G = GUNS[gun];
@@ -423,7 +461,7 @@ export class ViewModel {
       R.t += dt;
       const kf = sampleKeys(R.keys, R.t);
       // Sounds an Schluesselbildern
-      for (let i = 0; i < R.keys.length; i++) { const key = R.keys[i]; if (key.snd && R.t >= key.t && !R.fired.has(i)) { R.fired.add(i); this.onSound && this.onSound(key.snd); } }
+      for (let i = 0; i < R.keys.length; i++) { const key = R.keys[i]; if (key.snd && R.t >= key.t && !R.fired.has(i)) { R.fired.add(i); this.onSound && this.onSound(key.snd); this.reloadJolt(key.snd); } }
       const ra = 1 - a * 0.3;
       rx += kf.rot[0] * ra; ry += kf.rot[1] * ra; rz += kf.rot[2] * ra;
       pos.x += kf.pos[0]; pos.y += kf.pos[1]; pos.z += kf.pos[2];

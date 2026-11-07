@@ -298,17 +298,17 @@ export class LevelBuilder {
     const mid = (c0 + c1) / 2;
     const fr = 'metal_dark';
     if (axis === 'x') {
-      this.world.addBox(a, y0, mid - 0.01, b, y1, mid + 0.01, 'glass', { blocksLight: false, blocksSight: false }).visual = 'glass';
-      this.glassBoxes.push([a, y0, mid - 0.006, b, y1, mid + 0.006]);
-      this.box(a, y0 - 0.03, c0 - 0.04, b, y0, c1 + 0.04, 'laminate', { collide: false });
+      const gb = this.world.addBox(a, y0, mid - 0.01, b, y1, mid + 0.01, 'glass', { blocksLight: false, blocksSight: false }); gb.visual = 'glass';
+      this.glassBoxes.push([a, y0, mid - 0.006, b, y1, mid + 0.006, gb]);
+      this.box(a + 0.002, y0 - 0.03, c0 - 0.04, b - 0.002, y0 + 0.012, c1 + 0.04, 'laminate', { collide: false });
       this.box(a, y0, mid - 0.03, a + 0.05, y1, mid + 0.03, fr, { collide: false });
       this.box(b - 0.05, y0, mid - 0.03, b, y1, mid + 0.03, fr, { collide: false });
       this.box(a, y1 - 0.05, mid - 0.03, b, y1, mid + 0.03, fr, { collide: false });
       if (b - a > 1.7) this.box((a + b) / 2 - 0.025, y0, mid - 0.03, (a + b) / 2 + 0.025, y1, mid + 0.03, fr, { collide: false });
     } else {
-      this.world.addBox(mid - 0.01, y0, a, mid + 0.01, y1, b, 'glass', { blocksLight: false, blocksSight: false }).visual = 'glass';
-      this.glassBoxes.push([mid - 0.006, y0, a, mid + 0.006, y1, b]);
-      this.box(c0 - 0.04, y0 - 0.03, a, c1 + 0.04, y0, b, 'laminate', { collide: false });
+      const gb = this.world.addBox(mid - 0.01, y0, a, mid + 0.01, y1, b, 'glass', { blocksLight: false, blocksSight: false }); gb.visual = 'glass';
+      this.glassBoxes.push([mid - 0.006, y0, a, mid + 0.006, y1, b, gb]);
+      this.box(c0 - 0.04, y0 - 0.03, a + 0.002, c1 + 0.04, y0 + 0.012, b - 0.002, 'laminate', { collide: false });
       this.box(mid - 0.03, y0, a, mid + 0.03, y1, a + 0.05, fr, { collide: false });
       this.box(mid - 0.03, y0, b - 0.05, mid + 0.03, y1, b, fr, { collide: false });
       this.box(mid - 0.03, y1 - 0.05, a, mid + 0.03, y1, b, fr, { collide: false });
@@ -449,7 +449,7 @@ export class LevelBuilder {
       const parts = [];
       const L = len / 2;
       for (const sx of [-L, L - 0.04]) for (const sz of [-0.2, 0.16]) parts.push([sx, 0, sz, sx + 0.04, 2.1, sz + 0.04, 'metal']);
-      for (const y of [0.1, 0.6, 1.1, 1.6, 2.05]) parts.push([-L, y, -0.2, L, y + 0.03, 0.2, 'metal']);
+      for (const y of [0.1, 0.6, 1.1, 1.6, 2.05]) parts.push([-L + 0.006, y, -0.195, L - 0.006, y + 0.03, 0.195, 'metal']);
       let s = Math.abs(Math.floor(x * 7 + z * 13));
       for (const y of [0.13, 0.63, 1.13, 1.63]) {
         let cx = -L + 0.05;
@@ -647,7 +647,7 @@ export class LevelBuilder {
     // Absperrung
     for (let i = 0; i < 5; i++) this.box(14 + i * 1.3, 0, -15, 14.9 + i * 1.3, 1.0, -14.8, 'metal_paint', { phys: 'metal' });
     // Parkplatzmarkierung
-    for (let i = 0; i < 12; i++) this.renderBox(2 + i * 3.6, 0.003, -11, 2.1 + i * 3.6, 0.004, -6, 'plastic_white', {});
+    for (let i = 0; i < 12; i++) this.renderBox(2 + i * 3.6, 0.012, -11, 2.1 + i * 3.6, 0.014, -6, 'plastic_white', {});
   }
 
   car(x, z, rot, paint) {

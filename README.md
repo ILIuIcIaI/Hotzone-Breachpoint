@@ -1,112 +1,63 @@
 # Hotzone Breachpoint
 
-Ein taktischer SWAT-Shooter für Windows. Langsam, methodisch, tödlich: Räume klären, Verdächtige anrufen und festnehmen, Geiseln befreien. Die Inspiration ist *Ready or Not*, alle Inhalte sind aber eigenständig.
+Taktischer SWAT-Shooter für Windows, inspiriert von *Ready or Not*. Ein einzelner Einsatzbeamter räumt ein besetztes Bürogebäude Raum für Raum: Verdächtige anrufen, festnehmen oder ausschalten, Geiseln befreien, Beweise sichern. Wer auf Ergebene schießt, verstößt gegen die Einsatzregeln.
 
-![Empfang](docs/screenshots/01_lobby.jpg)
-
-## Download & Start (Windows)
-
-1. Unter **[Releases](../../releases/latest)** die Datei `HotzoneBreachpoint-win64.zip` herunterladen.
-2. Die ZIP-Datei entpacken.
-3. `HotzoneBreachpoint.exe` starten.
-
-> Die .exe ist nicht signiert. Windows SmartScreen zeigt deshalb beim ersten Start eventuell eine Warnung: **Weitere Informationen → Trotzdem ausführen**.
-
-Das Spiel läuft in einem eigenen Programmfenster (F11 schaltet auf Vollbild). Der Download ist nur etwa 0,2 MB groß, weil die kleine `HotzoneBreachpoint.exe` die **WebView2-Komponente** nutzt, die in Windows 11 bereits eingebaut ist. Unter Windows 10 kann man sie bei Bedarf kostenlos bei Microsoft nachinstallieren. Es wird nichts installiert und nichts ins Internet gesendet: Die Spieldateien werden nur lokal (127.0.0.1) an das Fenster übergeben.
-
-## Der Einsatz: Operation Kalte Bilanz
-
-Meridian Logistik GmbH, Verwaltungsgebäude, 02:40 Uhr. Eine bewaffnete Gruppe hat das Gebäude besetzt, im Ostflügel ist der Strom ausgefallen.
-
-- **3 Geiseln** befreien (Geschäftsführung, Pausenraum)
-- **Beweismittel** sichern (Laptop im Serverraum)
-- **13 Verdächtige** festnehmen oder neutralisieren
-- **2 Zivilisten** sichern
-
-Die Karte ist ein ausladendes Bürogebäude mit 19 Räumen: Empfang, Sicherheitsbüro, Konferenzraum, Lager mit Seiteneingang, Großraumbüro mit Kabinen, Serverraum, Archiv, Geschäftsführung, zwei Längsflure und zwei Querdurchgänge. Dadurch gibt es mehrere Wege, Flanken und Hinterhalte. Draußen liegt ein nächtlicher Parkplatz mit Einsatzfahrzeugen.
+[![Gameplay-Video ansehen](docs/media/gameplay-poster.jpg)](docs/media/gameplay.mp4)
+*Gameplay-Video (2 Minuten): Bild anklicken.*
 
 | | |
 |---|---|
-| ![Tür öffnen](docs/screenshots/02_breach.jpg) | ![Geiseln](docs/screenshots/05_hostages.jpg) |
-| ![Serverraum](docs/screenshots/03_server.jpg) | ![Lehnen](docs/screenshots/08_lean.jpg) |
-| ![Treffer](docs/screenshots/06_takedown.jpg) | ![Annäherung](docs/screenshots/07_approach.jpg) |
+| ![](docs/screenshots/02_breach.jpg) | ![](docs/screenshots/06_takedown.jpg) |
+| ![](docs/screenshots/05_hostages.jpg) | ![](docs/screenshots/03_server.jpg) |
+| ![](docs/screenshots/08_lean.jpg) | ![](docs/screenshots/07_approach.jpg) |
 
-## Features
+Download: [Releases](../../releases/latest)
 
-**Gunplay**
-- Karabiner (Auto/Einzel) und Pistole, Rotpunktvisier, echtes Zielen über die Visierlinie
-- Rückstoß mit Federphysik, Rückstellung, Waffenschwanken, Atmen, Mündungsfeuer, das den Raum ausleuchtet
-- Magazine werden einzeln verwaltet: Teilgefüllte Magazine gehen zurück in die Tasche, und angezeigt wird nur eine Schätzung (voll/gut/halb/wenig), keine exakte Zahl
-- Taktisches Nachladen vs. Nachladen bei leerer Kammer (Verschlussfang), Hülsen mit Physik und Klang
-- Durchschlag durch Trockenbau, Holztüren, Glas und Stellwände, aber nicht durch Beton
-- Waffe senkt sich automatisch an Wänden (Low Ready)
+## Wie das Spiel funktioniert
 
-**Bewegung**
-- Lehnen links/rechts (Q/E) mit Kollisionsprüfung, Ducken, Schleichen, Sprinten mit Ausdauer
-- Trägheit, Kopfwippen, Schritte je nach Boden (Teppich, Fliese, Beton); Lautstärke wird von der KI gehört
+**Gunplay:** Rückstoß und Waffenschwanken sind als Federsysteme umgesetzt, gezielt wird über das Rotpunktvisier. Magazine werden einzeln verwaltet; der Spieler sieht nur eine Füllstand-Schätzung. Kugeln durchschlagen Trockenbau, Holz, Glas und Stellwände, aber keinen Beton. Glas zerbricht und ist danach durchlässig. Treffer werden mit Hitmarker und Treffergeräusch bestätigt.
 
-**Gegner-KI**
-- Sichtkegel, Lichtverhältnisse (im Dunkeln ohne Lampe schwerer zu sehen), Hören von Schüssen, Schritten und Türen
-- Reaktionszeit, Zielen wird mit der Zeit genauer, Unterdrückung durch Beschuss
-- Deckungssuche, Abtauchen und Wiederauftauchen, seitliches Lehnen aus hoher Deckung, Winkel halten (Hinterhalt), Vorrücken je nach Aggressivität
-- Teamkommunikation („Kontakt!“), Nachladen in Deckung, Flucht bei gebrochener Moral
-- Aufgeben nach Anruf (F), abhängig von Moral, Verletzung, Überraschung und ob du auf sie zielst; manche **täuschen das Aufgeben nur vor** und ziehen eine versteckte Waffe, sobald du wegschaust
-- Zivilisten verstecken sich und folgen Anweisungen; Geiseln sind gefesselt
+**Bewegung:** Lehnen um Ecken mit Kollisionsprüfung, Ducken, Schleichen, Sprinten mit Ausdauer, träges Beschleunigen. Schrittgeräusche hängen vom Boden ab und sind für die KI hörbar.
 
-**Ragdoll & Physik (Euphoria-Anmutung)**
-- Verlet-Ragdoll mit „aktiven Muskeln“: Der Körper bleibt nach dem Treffer kurz angespannt, die Knie knicken ein, eine Hand greift an die Wunde, und die Arme fangen den Sturz ab
-- Kopftreffer: sofort schlaff. Der Schwung der Bewegung bleibt erhalten, die Waffe fällt physikalisch zu Boden
-- Blutspritzer an Wänden, Blutlachen, Treffer-Reaktionen bei Lebenden
+**Gegner-KI:** Wahrnehmung über Sichtkegel, Lichtverhältnisse und Gehör; die Reaktionszeit hängt von Entfernung und Können ab. Gegner suchen Deckung, tauchen zum Schießen auf, halten Winkel oder rücken vor (höchstens zwei gleichzeitig), weichen aus der Schusslinie und schießen nicht durch eigene Leute oder Geiseln. Auf Anruf ergeben sie sich, je nach Moral, Verletzung und Lage. Manche täuschen das Aufgeben nur vor.
 
-**Taktik**
-- Türen: öffnen/schließen, mit dem **Mausrad langsam aufschieben** zum Spähen, **eintreten** (V); wer dahinter steht, wird umgestoßen
-- **Blendgranaten** (G): blenden und betäuben Gegner, dich selbst auch, wenn du hinsiehst (inklusive Tinnitus)
-- Rules of Engagement: Wer auf Ergebene schießt, bekommt einen Regelverstoß. Am Ende gibt es eine Einsatzbewertung (S bis F)
+**Aktive Ragdolls (Euphoria-Prinzip):** Getroffene versuchen, das Gleichgewicht zu halten. Sie setzen Ausfallschritte zum Kipp-Punkt ihres Schwerpunkts, krümmen sich um die Wunde und greifen danach, während der freie Arm rudert. Mit nachlassender Muskelkraft knicken die Knie ein, der Sturz wird mit den Händen abgefangen, am Boden krümmen sie sich noch kurz. Kopftreffer führen zum sofortigen Zusammensacken.
 
-**Grafik & Technik**
-- Eigene vorberechnete Beleuchtung beim Laden (unter 1 s): Schatten pro Leuchte, weiche Schatten, Raumfüllung, Ecken-Abdunklung, Mondlicht durch Fenster
-- Waffenlampe mit Echtzeit-Schatten, Bloom, Filmkorn, Vignette, Schadens- und Blendeffekte
-- Alle Texturen, Modelle und Sounds werden **prozedural** im Code erzeugt, es gibt keine externen Assets
-- Sprachausgabe über die Windows-Stimmen (deutsch), Untertitel
-- Läuft auch auf schwächeren PCs: Qualitätsstufe *Niedrig* im Menü (geringere Auflösung, kleine Schattenkarte, ohne Bloom)
+**Figuren:** Durchgehende, verformbare Körper (Skinning) mit Kleidung, Kapuze oder Sturmhaube, Schutzweste mit Taschen, Holster und Stiefeln. Lebende Pose und Ragdoll nutzen dieselben Gelenke.
+
+**Taktik:** Türen öffnen, langsam aufschieben (Mausrad) oder eintreten. Blendgranaten blenden und betäuben, auch den Spieler selbst. Fällt der Spieler, rückt Verstärkung am Eingang nach; das fließt in die Bewertung ein.
+
+**Grafik und Ton:** Beleuchtung wird beim Laden vorberechnet (Schatten je Leuchte, Raumfüllung, Ecken-Abdunklung, Mondlicht durch Fenster), dazu eine Waffenlampe mit Echtzeitschatten. Texturen, Modelle und Sounds entstehen prozedural im Code; es gibt keine externen Assets. Die Sprachausgabe nutzt die Windows-Stimmen, mit eigener Funkstimme.
 
 ## Steuerung
 
 | Taste | Aktion |
 |---|---|
-| WASD | Bewegen |
-| Shift / Alt | Sprinten / Schleichen |
+| WASD · Shift · Alt | Bewegen · Sprinten · Schleichen |
 | Strg (halten) / C | Ducken |
-| Q / E | Lehnen links / rechts |
+| Q / E | Lehnen |
 | Linke / rechte Maustaste | Schießen / Zielen |
-| R | Nachladen |
-| B | Feuermodus |
-| T | Waffenlampe |
-| 1 / 2 | Karabiner / Pistole |
-| G | Blendgranate |
-| F (tippen) | Rufen („Polizei! Hände hoch!“) bzw. Tür öffnen/schließen |
-| F (halten) | Festnehmen, Geisel befreien, Beweis sichern |
-| Mausrad (an Tür) | Tür langsam öffnen |
-| V | Tür eintreten |
-| Tab | Einsatzziele |
-| Esc | Pause |
-| F11 / F3 | Vollbild / FPS-Anzeige |
+| R · B · T | Nachladen · Feuermodus · Waffenlampe |
+| 1 / 2 · G | Karabiner / Pistole · Blendgranate |
+| F tippen / halten | Rufen bzw. Tür · Festnehmen, Geisel befreien, Beweis sichern |
+| Mausrad · V | Tür langsam öffnen · Tür eintreten |
+| Tab · Esc · F11 · F3 | Einsatzziele · Pause · Vollbild · FPS |
 
-## Selbst bauen
+## Technik
 
-Voraussetzung: Node.js 20+.
+Three.js (WebGL), gebündelt mit Vite. Das Windows-Release ist ein kleiner eigener Launcher (C#, .NET Framework 4), der das Spiel in einem Programmfenster über die in Windows enthaltene WebView2-Komponente darstellt.
 
 ```bash
 npm install
 npm run dev      # Entwicklung unter http://localhost:5180
-npm start        # Entwicklungs-Desktopfenster (Electron)
-npm run pack     # Windows-Release (WebView2-Launcher) nach release/
+npm run pack     # Windows-Release nach release/
 ```
 
-`npm run pack` kompiliert den Launcher mit dem in Windows enthaltenen C#-Compiler (.NET Framework 4); weitere Werkzeuge sind dafür nicht nötig.
-
-Aufbau: `src/world` (Karte, Kollision, Licht-Baking, Navigation), `src/actors` (Skelett/IK, Ragdoll, KI), `src/player` (Steuerung, Waffenmodell), `src/fx` (Effekte, Nachbearbeitung), `src/engine` (Texturen, Materialien, Audio, Sprache), `launcher/` (Windows-Launcher), `electron/` (Entwicklungsfenster).
-
-## Stand
-
-Das ist die erste spielbare Version mit einer Karte und einem Einsatz. Geplant sind Teammitglieder mit Befehlen, weitere Karten, Ausrüstungswahl, detailliertere Figurenmodelle und Feinschliff.
+| Ordner | Inhalt |
+|---|---|
+| `src/world` | Karte, Kollision, Licht-Baking, Navigation, Türen |
+| `src/actors` | Skelett und IK, verformbare Körper, aktive Ragdoll, KI, Waffenmodelle |
+| `src/player` | Steuerung, Waffenmodell mit Händen und Animationen |
+| `src/fx` | Partikel, Einschüsse, Nachbearbeitung |
+| `src/engine` | Texturen, Materialien, Audio, Sprache, Eingabe |
+| `launcher/` | Windows-Launcher |

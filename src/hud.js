@@ -22,6 +22,20 @@ export class HUD {
     Object.assign(this.sub.style, { position: 'absolute', left: '50%', bottom: '14%', transform: 'translateX(-50%)', fontSize: '16px', textShadow: '0 1px 3px #000', textAlign: 'center', maxWidth: '70%', transition: 'opacity .3s' });
     this.el.appendChild(this.sub);
     this.subT = 0;
+    this.hm = document.createElement('div');
+    this.hm.innerHTML = '<i></i><i></i><i></i><i></i>';
+    Object.assign(this.hm.style, { position: 'absolute', left: '50%', top: '50%', width: '26px', height: '26px', marginLeft: '-13px', marginTop: '-13px', opacity: '0', transition: 'opacity .08s' });
+    [...this.hm.children].forEach((e, i) => Object.assign(e.style, { position: 'absolute', width: '8px', height: '2px', background: '#fff', boxShadow: '0 0 2px #000',
+      left: i % 2 ? '17px' : '1px', top: i < 2 ? '5px' : '19px', transform: 'rotate(' + ((i === 0 || i === 3) ? 45 : -45) + 'deg)' }));
+    this.el.appendChild(this.hm);
+    this.hmT = 0;
+  }
+  hitMarker(kill, head) {
+    this.hmT = kill ? 0.35 : 0.16;
+    const c = kill ? '#ff4a3a' : '#ffffff';
+    [...this.hm.children].forEach((e) => { e.style.background = c; e.style.width = kill ? '10px' : '8px'; });
+    this.hm.style.transform = 'scale(' + (kill ? 1.35 : 1) + ')';
+    this.hm.style.opacity = '1';
   }
   show(v) { this.el.classList.toggle('hidden', !v); }
 
@@ -99,6 +113,7 @@ export class HUD {
     const dirs = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
     this.compass.textContent = `${dirs[Math.round(deg / 45) % 8]}  ${Math.round(deg)}°`;
     this.dot.style.opacity = game.settings.dot && game.vm.ads < 0.3 && !P.sprinting ? '0.8' : '0';
+    if (this.hmT > 0) { this.hmT -= dt; if (this.hmT <= 0) this.hm.style.opacity = '0'; }
     if (this.subT > 0) { this.subT -= dt; if (this.subT <= 0) this.sub.style.opacity = '0'; }
   }
 }

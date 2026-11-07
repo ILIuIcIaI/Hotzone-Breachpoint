@@ -32,6 +32,7 @@ game.load((p, txt) => {
   loaded = true;
   startBtn.disabled = false;
   if (TEST) begin();
+  if (params.has('autoplay')) import('./dev/autoplay.js').then((m) => { game.autoplay = new m.AutoPlayer(game); });
   if (params.has('selftest')) {
     // Launcher-Selbsttest: Spiel starten, einen Moment laufen lassen, Canvas-Bild an den lokalen Launcher senden
     begin();
@@ -47,7 +48,7 @@ function begin() {
   if (!loaded) return;
   game.audio.init();
   game.audio.setVolume(settings.vol);
-  if (!game.hum) game.hum = game.audio.loop('hum', 0.12);
+  if (!game.hum) game.hum = game.audio.loop('hum', 0.05);
   if (!started) {
     started = true;
     game.speech.say('Zentrale an Team: Zugriff freigegeben. Viel Glück.', { prio: 5, type: 'radio', rate: 1.05 });
@@ -117,9 +118,11 @@ function frame(now) {
   let dt = (now - last) / 1000; last = now;
   if (dt > 0.05) dt = 0.05;
   if (!loaded) return;
+  if (game.autoplay && game.state === 'playing') game.autoplay.tick(dt);
   if (game.state === 'playing' || game.state === 'menu') game.update(dt);
   else game.input.endFrame();
   game.render(dt);
+  if (window.__afterRender) window.__afterRender();
   fpsAcc += dt; fpsN++;
   if (fpsAcc > 0.5) { fpsEl.textContent = Math.round(fpsN / fpsAcc) + ' FPS'; fpsAcc = 0; fpsN = 0; }
 }

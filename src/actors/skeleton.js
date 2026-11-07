@@ -184,10 +184,10 @@ function capsule(r, len) {
 
 export const LOOKS = {
   suspect: [
-    { top: 0x2b2f36, pants: 0x2a3140, shoes: 0x151515, head: 'balaclava', skin: 0xb08066, vest: false, gloves: 0x1a1a1a },
-    { top: 0x4a3b2c, pants: 0x30343a, shoes: 0x1c1712, head: 'balaclava', skin: 0x8d5f45, vest: false, gloves: 0x111111 },
-    { top: 0x253025, pants: 0x232628, shoes: 0x121212, head: 'cap', skin: 0xc49a7c, vest: false, gloves: null },
-    { top: 0x5a1f22, pants: 0x1f2633, shoes: 0x141414, head: 'balaclava', skin: 0xa6765a, vest: false, gloves: 0x1a1a1a },
+    { top: 0x3d4249, pants: 0x3a4254, shoes: 0x151515, head: 'balaclava', skin: 0xb08066, vest: false, gloves: 0x1a1a1a },
+    { top: 0x5c4a38, pants: 0x3c4047, shoes: 0x1c1712, head: 'balaclava', skin: 0x8d5f45, vest: false, gloves: 0x111111 },
+    { top: 0x36432f, pants: 0x34383c, shoes: 0x121212, head: 'cap', skin: 0xc49a7c, vest: false, gloves: null },
+    { top: 0x6e2a2c, pants: 0x2c3546, shoes: 0x141414, head: 'balaclava', skin: 0xa6765a, vest: false, gloves: 0x1a1a1a },
   ],
   hostage: [
     { top: 0xc9ced6, pants: 0x2c3442, shoes: 0x2a1c12, head: 'hair', skin: 0xd8b294, hair: 0x3b2a1e, tie: 0x7a1f2a },

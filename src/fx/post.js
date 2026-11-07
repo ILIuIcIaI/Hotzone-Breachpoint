@@ -20,7 +20,7 @@ const GradeShader = {
       vec2 c = vUv - 0.5;
       float r = length(c * vec2(uAspect, 1.0)) / uAspect * 1.6;
       // leichte chromatische Aberration am Rand + bei Beschuss
-      float ca = 0.0012 + uSuppress * 0.004 + uDamage * 0.004;
+      float ca = 0.0003 + uSuppress * 0.003 + uDamage * 0.003;
       vec3 col;
       col.r = texture2D(tDiffuse, vUv + c * ca).r;
       col.g = texture2D(tDiffuse, vUv).g;
@@ -54,7 +54,7 @@ export class Post {
     this.bloom = null;
     if (quality !== 'low') {
       const s = new THREE.Vector2(innerWidth, innerHeight);
-      this.bloom = new UnrealBloomPass(s, quality === 'high' ? 0.36 : 0.3, 0.55, 1.15);
+      this.bloom = new UnrealBloomPass(s, quality === 'high' ? 0.18 : 0.14, 0.4, 1.4);
       this.composer.addPass(this.bloom);
     }
     this.grade = new ShaderPass(GradeShader);

@@ -28,7 +28,7 @@ export function probeify(mat, probe) {
       .replace('#include <common>', '#include <common>\nuniform vec3 uProbe;\nuniform float uBakeScale;')
       .replace('#include <lights_fragment_maps>',
         '#include <lights_fragment_maps>\n{ vec3 wn = inverseTransformDirection( geometryNormal, viewMatrix );\n' +
-        'irradiance += uProbe * uBakeScale * (0.62 + 0.38 * wn.y); }');
+        'irradiance += uProbe * uBakeScale * 3.0 * (0.55 + 0.45 * wn.y); }');
   };
   mat.customProgramCacheKey = () => 'probe';
   return mat;
@@ -66,8 +66,8 @@ export function buildWorldMaterials(T, envMap) {
   std('carpet_blue', { map: T.carpet.map, normal: T.carpet.normal, color: 0x56606e, rough: 1, tex: 1.2, phys: 'concrete' });
   std('carpet_red', { map: T.carpet.map, normal: T.carpet.normal, color: 0x6b4a44, rough: 1, tex: 1.2, phys: 'concrete' });
   std('carpet_grey', { map: T.carpet.map, normal: T.carpet.normal, color: 0x6b6a66, rough: 1, tex: 1.2, phys: 'concrete' });
-  std('tile', { map: T.tile.map, normal: T.tile.normal, rough: 0.42, tex: 1.2, env: true, envI: 0.35, phys: 'concrete' });
-  std('tile_dark', { map: T.tile.map, normal: T.tile.normal, color: 0x6f6a62, rough: 0.3, tex: 1.2, env: true, envI: 0.45, phys: 'concrete' });
+  std('tile', { map: T.tile.map, normal: T.tile.normal, rough: 0.6, tex: 1.2, env: true, envI: 0.12, phys: 'concrete' });
+  std('tile_dark', { map: T.tile.map, normal: T.tile.normal, color: 0x6f6a62, rough: 0.5, tex: 1.2, env: true, envI: 0.14, phys: 'concrete' });
   std('concrete', { map: T.concrete.map, normal: T.concrete.normal, color: 0xa29f99, rough: 0.92, tex: 3, phys: 'concrete' });
   std('concrete_floor', { map: T.concrete.map, normal: T.concrete.normal, color: 0x8c8a85, rough: 0.7, tex: 3, env: true, envI: 0.2, phys: 'concrete' });
   std('asphalt', { map: T.asphalt.map, normal: T.asphalt.normal, color: 0x9a9a9a, rough: 0.95, tex: 4, phys: 'concrete' });
@@ -110,11 +110,11 @@ export function buildWorldMaterials(T, envMap) {
     const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(intensity) });
     M[key] = { mat: m, tex: 1, phys: 'glass', unlit: true };
   };
-  emis('lamp_on', 0xfff3dc, 1.7);
+  emis('lamp_on', 0xfff3dc, 1.15);
   emis('lamp_off', 0x3a3c3e, 1.0);
   emis('lamp_emergency', 0xff3a2a, 2.0);
-  emis('lamp_flicker', 0xfff3dc, 1.7);
-  emis('lamp_sodium', 0xffb066, 3.0);
+  emis('lamp_flicker', 0xfff3dc, 1.15);
+  emis('lamp_sodium', 0xffb066, 1.8);
   emis('exit_sign', 0x2bff6a, 1.6);
   emis('led_blue', 0x3d8bff, 2.5);
   const exitMat = new THREE.MeshBasicMaterial({ map: T.exit, color: new THREE.Color(1.6, 1.6, 1.6) });
@@ -122,8 +122,8 @@ export function buildWorldMaterials(T, envMap) {
 
   // Glas (transparent, separat gerendert)
   const glass = new THREE.MeshStandardMaterial({
-    color: 0x9fb8c4, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.18,
-    envMap, envMapIntensity: 0.9, depthWrite: false,
+    color: 0x9fb8c4, roughness: 0.12, metalness: 0.0, transparent: true, opacity: 0.12,
+    envMap, envMapIntensity: 0.3, depthWrite: false,
   });
   M.glass = { mat: glass, tex: 1, phys: 'glass', transparent: true };
   return M;

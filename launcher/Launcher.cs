@@ -17,8 +17,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("Hotzone Breachpoint")]
 [assembly: System.Reflection.AssemblyProduct("Hotzone Breachpoint")]
 [assembly: System.Reflection.AssemblyDescription("Hotzone Breachpoint")]
-[assembly: System.Reflection.AssemblyVersion("0.1.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("0.2.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.2.0.0")]
 
 namespace HotzoneBreachpoint
 {

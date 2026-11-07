@@ -20,14 +20,29 @@ export class Speech {
     }
   }
 
+  // Bevorzugte Stimmen je Rolle (natuerliche Microsoft-Stimmen zuerst, sonst Desktop-Stimmen)
+  pickBy(names) {
+    for (const n of names) {
+      const natural = this.voices.find((v) => v.name.toLowerCase().includes(n) && /natural|online/i.test(v.name));
+      if (natural) return natural;
+    }
+    for (const n of names) { const v = this.voices.find((x) => x.name.toLowerCase().includes(n)); if (v) return v; }
+    return null;
+  }
+
   voiceFor(who, type) {
     if (!this.voices.length) return null;
-    // maennliche Stimmen fuer Verdaechtige bevorzugen, falls erkennbar
-    const male = this.voices.filter((v) => /stefan|conrad|killian|male|mann|markus|florian/i.test(v.name));
-    const female = this.voices.filter((v) => /katja|hedda|amala|female|frau|seraphina|elke|louisa/i.test(v.name));
+    const male = this.voices.filter((v) => /stefan|conrad|killian|florian|male|markus/i.test(v.name));
+    const female = this.voices.filter((v) => /katja|hedda|amala|female|seraphina|elke|louisa/i.test(v.name));
+    if (type === 'radio') return this.pickBy(['conrad', 'florian', 'killian', 'stefan']) || male[0] || this.voices[0];
+    if (type === 'player') return this.pickBy(['killian', 'florian', 'stefan', 'conrad']) || male[0] || this.voices[0];
     let pool = this.voices;
-    if (type === 'suspect' || type === 'player') pool = male.length ? male : this.voices;
-    else if (type === 'hostage' || type === 'civilian') pool = (who % 2 && female.length) ? female : (male.length ? male : this.voices);
+    if (type === 'suspect') pool = male.length ? male : this.voices;
+    else if (type === 'hostage' || type === 'civilian') pool = female.length ? female : this.voices;
+    // die Funkstimme nicht fuer andere Rollen verwenden, wenn es Alternativen gibt
+    const radio = this.voiceFor(0, 'radio');
+    const alt = pool.filter((v) => v !== radio);
+    if (alt.length) pool = alt;
     return pool[Math.abs(who | 0) % pool.length];
   }
 
@@ -43,8 +58,12 @@ export class Speech {
     u.lang = 'de-DE';
     const v = this.voiceFor(o.who ?? 0, o.type);
     if (v) u.voice = v;
-    u.pitch = o.pitch ?? 1;
-    u.rate = o.rate ?? 1.15;
+    // Rollenklang: Verdaechtige tiefer/rauer, Zivilisten heller, Funk ruhig und deutlich
+    const rolePitch = o.type === 'suspect' ? 0.78 : o.type === 'radio' ? 0.95 : o.type === 'player' ? 0.9 : o.type ? 1.12 : 1;
+    u.pitch = (o.pitch ?? 1) * rolePitch;
+    u.rate = o.type === 'radio' ? 1.02 : (o.rate ?? 1.15);
+    if (o.type === 'radio' && this.onRadio) { this.onRadio(); u.onstart = null; }
+    const endRadio = o.type === 'radio' && this.onRadio;
     let vol = 1;
     if (o.pos) {
       const d = Math.hypot(o.pos.x - this.listener.x, o.pos.y - this.listener.y, o.pos.z - this.listener.z);
@@ -53,7 +72,7 @@ export class Speech {
     }
     u.volume = vol * (o.vol ?? 1);
     this.current = { prio, who: o.who };
-    u.onend = () => { if (this.current && this.current.who === o.who) this.current = null; };
+    u.onend = () => { if (this.current && this.current.who === o.who) this.current = null; if (endRadio) this.onRadio(); };
     this.synth.speak(u);
   }
 

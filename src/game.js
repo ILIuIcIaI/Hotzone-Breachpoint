@@ -35,6 +35,7 @@ export class Game {
     this.speech.enabled = settings.voice;
     this.hud = new HUD();
     this.speech.onSubtitle = (t, who) => this.hud.subtitle(t, who);
+    this.speech.onRadio = () => this.audio.play('radio', { vol: 0.5, verb: 0, jitter: false });
     this.npcs = [];
     this.nades = [];
     this.stats = null;
@@ -48,7 +49,7 @@ export class Game {
     R.setPixelRatio(pr);
     R.setSize(innerWidth, innerHeight, false);
     R.toneMapping = THREE.ACESFilmicToneMapping;
-    R.toneMappingExposure = 1.0;
+    R.toneMappingExposure = 0.95;
     R.outputColorSpace = THREE.SRGBColorSpace;
     R.shadowMap.enabled = true;
     R.shadowMap.type = q === 'low' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
@@ -87,7 +88,9 @@ export class Game {
     this.vm = new ViewModel(q, this.envMap);
     this.vm.setFlashTexture(this.T.muzzle);
     this.vm.setSleeveTexture(this.T.fabric.map, this.T.fabric.normal);
+    this.vm.setGunTextures(this.T);
     this.vm.onSound = (s) => this.audio.play(s, { vol: 0.8, verb: 0.05 });
+    this.vm.onDropMag = () => { const cam = this.camera; const p = cam.localToWorld(new V(-0.05, -0.35, -0.35)); const v = new V(0, -0.5, 0).add(new V(this.player.vel.x, 0, this.player.vel.z)); this.fx.dropMag(p, v, this.player.gun === 'pistol'); };
     this.fx = new Effects(this, this.T, this.envMap);
     this.post = new Post(R, this.scene, this.camera, this.vm.scene, this.vm.camera, q);
     if (q === 'high') { this.post.composer.renderTarget1.samples = 4; this.post.composer.renderTarget2.samples = 4; }
@@ -106,16 +109,15 @@ export class Game {
   }
 
   buildGlass() {
-    const geos = [];
-    for (const [x0, y0, z0, x1, y1, z1] of this.builder.glassBoxes) {
+    this.glassPanes = [];
+    for (const [x0, y0, z0, x1, y1, z1, box] of this.builder.glassBoxes) {
       const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
       g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
-      geos.push(g);
-    }
-    for (const g of geos) {
       const m = new THREE.Mesh(g, this.M.glass.mat);
       m.renderOrder = 3;
       this.scene.add(m);
+      box.glassMesh = m; box.orig = { min: [...box.min], max: [...box.max] };
+      this.glassPanes.push(box);
     }
   }
 
@@ -124,7 +126,7 @@ export class Game {
     const mkDoorMats = (probe) => ({
       woodDoor: probeify(new THREE.MeshStandardMaterial({ map: T.wood.map, normalMap: T.wood.normal, color: 0xa88560, roughness: 0.55 }), probe),
       metalDoor: probeify(new THREE.MeshStandardMaterial({ map: T.metal.map, color: 0x6f757b, roughness: 0.45, metalness: 0.6, envMap: this.envMap, envMapIntensity: 0.4 }), probe),
-      glassDoor: new THREE.MeshStandardMaterial({ color: 0x9fb8c4, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.22, envMap: this.envMap, envMapIntensity: 0.9, depthWrite: false }),
+      glassDoor: new THREE.MeshStandardMaterial({ color: 0x9fb8c4, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.14, envMap: this.envMap, envMapIntensity: 0.3, depthWrite: false }),
       alu: probeify(new THREE.MeshStandardMaterial({ color: 0x55595e, roughness: 0.35, metalness: 0.8, envMap: this.envMap, envMapIntensity: 0.5 }), probe),
       handle: probeify(new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.25, metalness: 0.9, envMap: this.envMap, envMapIntensity: 0.9 }), probe),
     });
@@ -191,12 +193,12 @@ export class Game {
   buildDynamicLights() {
     const q = this.settings.quality;
     // Waffenlampe
-    const fl = this.flashlightLight = new THREE.SpotLight(0xfff4e6, 26, 32, 0.36, 0.55, 1.5);
+    const fl = this.flashlightLight = new THREE.SpotLight(0xfff1e0, 15, 28, 0.42, 0.78, 1.35);
     fl.castShadow = true;
     const sm = q === 'low' ? 512 : q === 'high' ? 2048 : 1024;
     fl.shadow.mapSize.set(sm, sm);
     fl.shadow.camera.near = 0.15; fl.shadow.camera.far = 32;
-    fl.shadow.bias = -0.0006; fl.shadow.normalBias = 0.025;
+    fl.shadow.bias = -0.0012; fl.shadow.normalBias = 0.06; fl.shadow.radius = 3;
     this.scene.add(fl); this.scene.add(fl.target);
     // Muendungsfeuer (Welt)
     this.muzzleLight = new THREE.PointLight(0xffaa55, 0, 12, 1.8);
@@ -238,7 +240,9 @@ export class Game {
     SPAWNS.hostages.forEach((s, i) => this.npcs.push(new NPC(this, s, 'hostage', i)));
     SPAWNS.civilians.forEach((s, i) => this.npcs.push(new NPC(this, s, 'civilian', i)));
     for (const c of this.nav.covers) c.used = null;
-    for (const d of this.world.doors) { d.open = 0; d.target = 0; d._upd(); if (d.mesh) d.mesh.rotation.y = -d.angle; }
+    for (const d of this.world.doors) { d.open = 0; d.target = 0; d.broken = false; if (d.glassMesh) d.glassMesh.visible = true; d._upd(); if (d.mesh) d.mesh.rotation.y = -d.angle; }
+    for (const b of this.glassPanes || []) { if (b.broken) { b.broken = false; b.min = [...b.orig.min]; b.max = [...b.orig.max]; b.glassMesh.visible = true; } }
+    this.respawnT = 0;
     // Haupteingang leicht offen? Nein – geschlossen, Spieler entscheidet.
     this.player = new Player(this, SPAWNS.player);
     this.vm.onSwitched = (to) => this.player.onSwitched(to);
@@ -328,6 +332,7 @@ export class Game {
       if (n === src || !n.alive) continue;
       const d = n.distTo(x, z);
       if (d > radius) continue;
+      if (type === 'shot' && d > radius * 0.55 && !this.world.los(x, 1.4, z, n.pos.x, 1.4, n.pos.z)) continue; // Waende daempfen
       if (type === 'step' || type === 'door' || type === 'yell') {
         // durch Waende gedaempft
         if (d > radius * 0.5 && !this.world.los(x, 1.2, z, n.pos.x, 1.2, n.pos.z)) continue;
@@ -343,7 +348,7 @@ export class Game {
     const P = this.player;
     const room = roomAt(P.pos.x, P.pos.z);
     this.audio.play(D.snd, { vol: 1, verb: room ? 0.55 : 0.2, important: true, rate: 1 });
-    this.emitNoise(P.pos.x, P.pos.z, 48, 'shot', null);
+    this.emitNoise(P.pos.x, P.pos.z, 30, 'shot', null);
     let power = 1, remaining = 150;
     const hitNpcs = new Set();
     const origin = o.clone();
@@ -361,8 +366,10 @@ export class Game {
       if (best) {
         const pt = o.clone().addScaledVector(dir, best.h.t);
         hitNpcs.add(best.n);
+        const wasAlive = best.n.alive;
         best.n.damage(D.dmg * power, best.h.zone, dir.clone(), pt, best.h.joint, P.chestPos.clone());
         this.audio.play('imp_flesh', { pos: pt, vol: 0.9, ref: 3 });
+        if (wasAlive) { const kill = !best.n.alive; this.hud.hitMarker(kill, best.h.zone === 'head'); this.audio.play(kill ? 'killconfirm' : 'hitmark', { vol: kill ? 0.55 : 0.4, verb: 0, jitter: false }); }
         S.hits++;
         if (!firstPoint) firstPoint = pt;
         power -= 0.55; remaining -= best.h.t + 0.3;
@@ -374,6 +381,7 @@ export class Game {
       if (!firstPoint) firstPoint = pt;
       const phys = PHYS[wh.mat] || PHYS.concrete;
       const nrm = new V(wh.nx, wh.ny, wh.nz);
+      if (wh.mat === 'glass') { this.breakGlass(wh, pt, dir); remaining -= wh.t + 0.02; o = pt.addScaledVector(dir, 0.03); continue; }
       this.fx.impact(phys.fx, pt, nrm, dir);
       this.audio.play('imp_' + phys.snd, { pos: pt, vol: 0.75, ref: 2.5 });
       // Dicke bestimmen
@@ -401,7 +409,7 @@ export class Game {
     const P = this.player;
     this.audio.play(W.snd, { pos: muzzle, vol: 1, ref: 7, rolloff: 0.9, important: true, verb: 0.5 });
     this.fx.npcFlash(muzzle, dir);
-    this.emitNoise(npc.pos.x, npc.pos.z, 35, 'shot', npc);
+    this.emitNoise(npc.pos.x, npc.pos.z, 22, 'shot', npc);
     const wh = this.world.raycast(muzzle.x, muzzle.y, muzzle.z, dir.x, dir.y, dir.z, 120, null, true, {});
     let tw = wh ? wh.t : 120;
     // Spieler
@@ -420,6 +428,8 @@ export class Game {
       P.damage(W.dmg, target.zone, dir);
     } else if (target && target.npc) {
       target.npc.damage(W.dmg * 0.8, target.h.zone, dir.clone(), end, target.h.joint, muzzle);
+    } else if (wh && wh.mat === 'glass') {
+      this.breakGlass(wh, end, dir);
     } else if (wh) {
       const phys = PHYS[wh.mat] || PHYS.concrete;
       this.fx.impact(phys.fx, end, new V(wh.nx, wh.ny, wh.nz), dir);
@@ -626,10 +636,45 @@ export class Game {
     this.emitNoise(P.pos.x, P.pos.z, 16, 'yell', null);
   }
 
+  // Glasscheibe oder Glastuer zerbricht: danach durchlaessig und durchgehbar
+  breakGlass(hit, pt, dir) {
+    const b = hit.box, d = hit.door;
+    if (d) { if (d.broken) return; d.broken = true; if (d.glassMesh) d.glassMesh.visible = false; }
+    else if (b) {
+      if (b.broken) return;
+      b.broken = true;
+      if (b.glassMesh) b.glassMesh.visible = false;
+      b.min[1] = b.max[1] = -100; // aus Kollision/Raycasts nehmen
+    } else return;
+    this.audio.play('glassbreak', { pos: pt, vol: 1, ref: 4, important: true });
+    this.emitNoise(pt.x, pt.z, 18, 'kick', null);
+    const L = this.fx.light(pt); const lum = Math.min(1.3, 0.3 + (L.r + L.g + L.b) * 0.5);
+    for (let i = 0; i < 70; i++) {
+      const s = Math.random() < 0.65 ? 1 : -1;
+      this.fx.dust.spawn(pt.x + (Math.random() - 0.5) * 0.8, pt.y + (Math.random() - 0.6) * 0.9, pt.z + (Math.random() - 0.5) * 0.8,
+        dir.x * s * (1 + Math.random() * 2.5) + (Math.random() - 0.5), Math.random() * 1.2, dir.z * s * (1 + Math.random() * 2.5) + (Math.random() - 0.5),
+        0.6 * lum + 0.15, 0.72 * lum + 0.15, 0.78 * lum + 0.15, 0.9, 0.012 + Math.random() * 0.02, 1.6, 0, 9.8, 0.1);
+    }
+  }
+
   onPlayerDeath() {
-    this.hud.centerMsg('AUSGESCHALTET', 'Einsatz gescheitert', 0);
-    this.endT = 3;
-    this.speech.say('Beamter verletzt! Beamter verletzt!', { prio: 9, type: 'radio' });
+    this.stats.downs = (this.stats.downs || 0) + 1;
+    this.hud.centerMsg('BEAMTER VERLETZT', 'Verstärkung rückt in 4 Sekunden am Eingang nach', 0);
+    this.respawnT = 4;
+    this.speech.say('Beamter verletzt! Verstärkung rückt nach.', { prio: 9, type: 'radio' });
+  }
+
+  respawnPlayer() {
+    const P = this.player;
+    const sp = SPAWNS.player;
+    P.pos.x = sp.x; P.pos.z = sp.z; P.yaw = Math.PI + sp.yaw; P.pitch = 0;
+    P.vel.set(0, 0, 0); P.health = 100; P.alive = true; P.damageFx = 0; P.suppress = 0;
+    P.ammo.carbine = { mag: 30, chamber: 1, mags: [30, 30, 30, 30], mode: 0 };
+    P.ammo.pistol = { mag: 15, chamber: 1, mags: [15, 15], mode: 0 };
+    P.nades = 3; P.gun = 'carbine'; this.vm.setWeapon('carbine'); this.vm.reload = null; P.reloadState = null;
+    for (const n of this.npcs) if (n.type === 'suspect' && n.state === 'combat') { n.threat.visible = false; n.threat.seenT = n.t - 20; n.awareness = 0.4; }
+    this.hud.center.classList.add('hidden');
+    this.hud.toast('Verstärkung im Einsatz – Beamter ersetzt', 'info');
   }
 
   // ---------------- Schleife ----------------
@@ -671,12 +716,14 @@ export class Game {
     fl.visible = P.flashlight && P.alive;
     if (fl.visible) {
       const cam = this.camera;
-      _v.set(0.12, -0.12, -0.15).applyQuaternion(cam.quaternion).add(cam.position);
-      fl.position.copy(_v);
-      // Lampe folgt dem Waffenschwanken leicht
-      const sw = this.vm.swayR.x;
-      _w.set(sw.y * -0.5 + (this.vm.sprint * 0.5), sw.x * 0.5 - this.vm.block * 0.6 - this.vm.sprint * 0.4, -1).normalize().applyQuaternion(cam.quaternion);
-      fl.target.position.copy(cam.position).addScaledVector(_w, 10);
+      // Position und Richtung aus der tatsaechlichen Lage der Waffe (Lampe am Handschutz)
+      const g = this.vm.guns[this.vm.cur].group;
+      _v.set(0.038, 0.098, -0.45).applyMatrix4(g.matrix);           // Lampe im Kamera-Raum
+      _w.set(0, 0, -1).transformDirection(g.matrix);                  // Laufrichtung im Kamera-Raum
+      _v.z = Math.max(_v.z, -0.35);
+      fl.position.copy(_v).applyQuaternion(cam.quaternion).add(cam.position);
+      _w.applyQuaternion(cam.quaternion);
+      fl.target.position.copy(fl.position).addScaledVector(_w, 10);
       fl.target.updateMatrixWorld();
     }
     if (this.muzzleT > 0) { this.muzzleT -= dt; if (this.muzzleT <= 0) this.muzzleLight.intensity = 0; }
@@ -717,6 +764,7 @@ export class Game {
     this.roomName = r ? r.name : 'Parkplatz';
     this.hud.update(dt, P, this);
     if (this.endT > 0) { this.endT -= dt; if (this.endT <= 0) this.finish(false); }
+    if (this.respawnT > 0) { this.respawnT -= dt; if (this.respawnT <= 0) this.respawnPlayer(); }
     I.endFrame();
   }
 
@@ -745,7 +793,7 @@ export class Game {
     score += S.evidence ? 10 : 0;
     score += S.arrests * 6 + (S.kills - S.penalties) * 3;
     score += o.civs * 5;
-    score -= S.penalties * 15 + S.civKilled * 20 + S.hostageKilled * 25;
+    score -= S.penalties * 15 + S.civKilled * 20 + S.hostageKilled * 25 + (S.downs || 0) * 10;
     if (!success) score -= 20;
     if (this.player.alive) score += 10;
     const max = 3 * 15 + 10 + 13 * 6 + 2 * 5 + 10;
@@ -756,7 +804,7 @@ export class Game {
       grade, score, rows: [
         ['Geiseln befreit', `${o.hostages}/${o.hostagesTotal}`], ['Beweismittel', S.evidence ? 'gesichert' : 'nicht gesichert'],
         ['Verdächtige festgenommen', S.arrests], ['Verdächtige getötet', S.kills], ['Zivilisten gesichert', `${o.civs}/${o.civsTotal}`],
-        ['Unerlaubte Gewalt', S.penalties], ['Unbeteiligte getötet', S.civKilled + S.hostageKilled],
+        ['Unerlaubte Gewalt', S.penalties], ['Beamte verletzt (Verstärkung)', S.downs || 0], ['Unbeteiligte getötet', S.civKilled + S.hostageKilled],
         ['Trefferquote', S.shots ? Math.round(S.hits / S.shots * 100) + '%' : '–'], ['Einsatzdauer', `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')}`],
         ['Punkte', score],
       ],

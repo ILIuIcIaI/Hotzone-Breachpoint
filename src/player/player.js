@@ -151,7 +151,8 @@ export class Player {
     const cam = G.camera;
     cam.position.copy(this.eyePos);
     const shk = this.shake * 0.01;
-    this.camRoll += (-this.lean * 0.21 - this.camRoll) * Math.min(1, dt * 10);
+    const rl = G.vm.reload ? Math.sin(Math.min(1, G.vm.reload.t / G.vm.reload.dur) * Math.PI) : 0;
+    this.camRoll += (-this.lean * 0.21 + rl * 0.035 - this.camRoll) * Math.min(1, dt * 10);
     cam.rotation.set(this.pitch + (Math.random() - 0.5) * shk, this.yaw + (Math.random() - 0.5) * shk, this.camRoll + Math.sin(this.stepPhase * Math.PI * 2) * 0.004 * bobA, 'YXZ');
     cam.updateMatrixWorld();
     cam.getWorldDirection(this.viewDir);
@@ -183,7 +184,7 @@ export class Player {
     const r = roomAt(this.pos.x, this.pos.z);
     const f = r ? r.floor : 'asphalt';
     const kind = f.startsWith('carpet') ? 'carpet' : f.startsWith('tile') ? 'tile' : f === 'asphalt' ? 'asphalt' : 'concrete';
-    G.audio.play('step_' + kind, { vol: sprint ? 0.55 : quiet ? 0.18 : 0.33, verb: 0.12 });
+    G.audio.play('step_' + kind, { vol: (sprint ? 0.3 : quiet ? 0.07 : 0.14) * (0.85 + Math.random() * 0.3), verb: 0.06, lowpass: kind === 'carpet' ? 900 : 2600 });
     const rad = sprint ? 11 : quiet ? 1.5 : kind === 'carpet' ? 3 : 5;
     G.emitNoise(this.pos.x, this.pos.z, rad, 'step', null);
   }

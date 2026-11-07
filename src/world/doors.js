@@ -95,6 +95,7 @@ export class Door {
 
   // Strahl gegen Tuerblatt
   raycast(ox, oy, oz, dx, dy, dz, maxT) {
+    if (this.broken) return null;
     if (oy + dy * maxT < -1 && oy < 0) return null;
     // in lokales System: u (entlang), v (normal), y
     const rx = ox - this.cx, rz = oz - this.cz;
@@ -119,6 +120,7 @@ export class Door {
   }
 
   pushCircle(pos, r, y0, y1) {
+    if (this.broken) return false;
     if (y0 > this.height) return false;
     const rx = pos.x - this.cx, rz = pos.z - this.cz;
     const lu = rx * this.ux + rz * this.uz, lv = rx * this.vx + rz * this.vz;
@@ -157,7 +159,7 @@ export function buildDoorMesh(door, mats) {
     const add = (sx, sy, sz, px, py, pz, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); me.position.set(px, py, pz); me.castShadow = true; g.add(me); };
     add(w, 0.08, t + 0.01, w / 2, 0.04, 0, frame); add(w, 0.08, t + 0.01, w / 2, h - 0.04, 0, frame);
     add(0.06, h, t + 0.01, 0.03, h / 2, 0, frame); add(0.06, h, t + 0.01, w - 0.03, h / 2, 0, frame);
-    const gl = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, h - 0.14, 0.012), leafMat); gl.position.set(w / 2, h / 2, 0); g.add(gl);
+    const gl = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, h - 0.14, 0.012), leafMat); gl.position.set(w / 2, h / 2, 0); g.add(gl); door.glassMesh = gl;
     add(0.03, 0.5, 0.06, w - 0.15, 1.05, 0.05, frame); add(0.03, 0.5, 0.06, w - 0.15, 1.05, -0.05, frame);
   } else {
     const leaf = new THREE.Mesh(new THREE.BoxGeometry(w - 0.01, h - 0.01, t), leafMat);

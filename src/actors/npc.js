@@ -1,6 +1,8 @@
 // NPCs: Verdaechtige (Kampf-KI), Zivilisten, Geiseln.
 import * as THREE from 'three';
-import { BodyMesh, LOOKS, computePose, NJ, J, HITBOXES, getJ, buildNpcGun } from './skeleton.js';
+import { LOOKS, computePose, NJ, J, HITBOXES, getJ } from './skeleton.js';
+import { SkinnedBody } from './body.js';
+import { buildNpcGun } from './guns.js';
 import { Ragdoll } from './ragdoll.js';
 import { rayCapsule } from '../world/collision.js';
 
@@ -27,9 +29,9 @@ export const LINES = {
 };
 
 const WEAPONS = {
-  rifle: { rpm: 620, burst: [3, 5], pause: [0.45, 1.0], mag: 30, dmg: 34, spread: 0.7, snd: 'rifle' },
-  smg: { rpm: 820, burst: [4, 8], pause: [0.4, 0.8], mag: 30, dmg: 24, spread: 1.4, snd: 'smg' },
-  pistol: { rpm: 330, burst: [1, 3], pause: [0.35, 0.8], mag: 15, dmg: 28, spread: 1.1, snd: 'pistol' },
+  rifle: { rpm: 620, burst: [3, 5], pause: [0.45, 1.0], mag: 30, dmg: 27, spread: 0.7, snd: 'rifle' },
+  smg: { rpm: 820, burst: [4, 8], pause: [0.4, 0.8], mag: 30, dmg: 20, spread: 1.4, snd: 'smg' },
+  pistol: { rpm: 330, burst: [1, 3], pause: [0.35, 0.8], mag: 15, dmg: 22, spread: 1.1, snd: 'pistol' },
 };
 
 let NPC_ID = 0;
@@ -89,7 +91,7 @@ export class NPC {
     const looks = LOOKS[type === 'suspect' ? 'suspect' : type === 'hostage' ? 'hostage' : 'civilian'];
     const look = { ...looks[lookIdx % looks.length] };
     if (this.armor) look.vest = true;
-    this.body = new BodyMesh(look, { armor: this.armor });
+    this.body = new SkinnedBody(look, { armor: this.armor, textures: game.T });
     game.scene.add(this.body.group);
     this.joints = new Float32Array(NJ * 3);
     this.prevJoints = new Float32Array(NJ * 3);
@@ -197,6 +199,7 @@ export class NPC {
           this.say('spotted', 2, true);
           this.game.alertNearby(this, tp.x, tp.z);
         } else this.reactT = Math.max(this.reactT, rnd(0.15, 0.35) * (1.4 - this.skill));
+        if (this.distTo(tp.x, tp.z) < 3) this.reactT = Math.min(this.reactT, 0.2);
       }
     } else if (this.awareness > 0.55 && this.state !== 'combat' && this.state !== 'investigate' && vis) {
       this.investigate(ph.x, ph.z, false);
@@ -305,13 +308,17 @@ export class NPC {
     }
     if (th.visible) {
       // unter Beschuss -> Deckung
-      if (this.suppress > 0.8 && !this.cover && !this.path && Math.random() < 0.5) { this.takeCover(th, 9); return; }
+      if ((this.suppress > 0.8 || this.t - this.lastHitT < 1.5) && !this.cover && !this.path) {
+        if (!this.takeCover(th, 9)) this.breakLOS(th);
+        return;
+      }
       this.nextReposT -= dt;
       if (this.nextReposT <= 0) {
         this.nextReposT = rnd(2.5, 5.5) * (1.2 - this.aggression * 0.5);
         const r = Math.random();
         if (r < 0.45 * (1 - this.aggression) + 0.15) this.takeCover(th, 8);
-        else if (r < 0.7 && dist > 5 && this.aggression > 0.55) {
+        else if (r < 0.7 && dist > 5 && this.aggression > 0.55 && this.game.npcs.filter((o) => o !== this && o.pushing && o.alive && o.t - o.pushT < 6).length < 2) {
+          this.pushing = true; this.pushT = this.t;
           // vorruecken, aber nicht zu nah
           const k = Math.max(0, dist - rnd(3.5, 6)) / dist;
           this.setGoal(this.pos.x + (th.x - this.pos.x) * k * 0.5, this.pos.z + (th.z - this.pos.z) * k * 0.5, true);
@@ -329,7 +336,9 @@ export class NPC {
           // aus Deckung haltend warten (Hinterhalt)
         } else if (this.aggression > 0.6 && since > 3 && since < 25) {
           // suchen: zum letzten bekannten Ort vorsichtig
-          if (this.distTo(th.x, th.z) > 1.5) this.setGoal(th.x, th.z, true);
+          const pushers = this.game.npcs.filter((o) => o !== this && o.pushing && o.alive && o.t - o.pushT < 8).length;
+          if (pushers >= 2) { if (!this.cover) this.takeCover(th, 7); this.holdPos = true; }
+          else if (this.distTo(th.x, th.z) > 1.5) { this.pushing = true; this.pushT = this.t; this.setGoal(th.x, th.z, true); }
           else { th.seenT = this.t - 30; }
         } else if (since > 4 && !this.holdPos) {
           // Winkel halten: Position mit Blick auf Zugang
@@ -340,6 +349,39 @@ export class NPC {
         }
       }
     }
+  }
+
+  // Punkt in der Naehe suchen, von dem aus die Bedrohung keine Sicht hat (um die Ecke, hinter Moebel)
+  breakLOS(th) {
+    const W = this.game.world, nav = this.game.nav;
+    let best = null, bd = 1e9;
+    const away = Math.atan2(this.pos.x - th.x, this.pos.z - th.z);
+    for (let i = 0; i < 12; i++) {
+      const a = away + (i - 6) * 0.45, r = 1.5 + (i % 3) * 1.2;
+      const x = this.pos.x + Math.sin(a) * r, z = this.pos.z + Math.cos(a) * r;
+      if (!nav.isWalk(x, z)) continue;
+      if (W.los(x, 1.5, z, th.x, th.y, th.z)) continue;
+      const d = r + Math.abs(i - 6) * 0.2;
+      if (d < bd) { bd = d; best = [x, z]; }
+    }
+    if (best) { this.setGoal(best[0], best[1], true); this.crouchT = 0.5; return true; }
+    this.crouchT = 1; // nichts gefunden: wenigstens klein machen
+    return false;
+  }
+
+  // Kein Eigenbeschuss: steht jemand anderes in der Schusslinie?
+  lineBlockedByFriend(th) {
+    const e = this.eye;
+    const dx = th.x - e.x, dz = th.z - e.z, L = Math.hypot(dx, dz) || 1;
+    for (const o of this.game.npcs) {
+      if (o === this || !o.alive) continue;
+      const ox = o.pos.x - e.x, oz = o.pos.z - e.z;
+      const along = (ox * dx + oz * dz) / L;
+      if (along < 0.3 || along > L - 0.3) continue;
+      const perp = Math.abs(ox * dz - oz * dx) / L;
+      if (perp < 0.45) return true;
+    }
+    return false;
   }
 
   takeCover(th, maxR) {
@@ -509,7 +551,7 @@ export class NPC {
     this.state = 'dead';
     if (this.cover) { this.cover.used = null; this.cover = null; }
     this.ragdoll = new Ragdoll(this.game.world, this.joints, this.prevJoints, this.lastDt, {
-      joint, dir: dir.clone(), power: zone === 'head' ? 3.2 : 2.6, zone, point: point.clone(),
+      joint, dir: dir.clone(), power: zone === 'head' ? 2.4 : 2.0, zone, point: point.clone(),
     });
     // Waffe fallen lassen
     if (this.hasGun && this.gun && !this.gunDropped) {
@@ -517,7 +559,6 @@ export class NPC {
       this.ragdoll.dropGun(a, b, new V(dir.x * 1.5 + rnd(-0.5, 0.5), 1.2, dir.z * 1.5 + rnd(-0.5, 0.5)));
     }
     this.game.speech.cancelWho(this.id);
-    this.game.audio.play('bodyfall', { pos: new V(this.pos.x, 0.5, this.pos.z), delay: 0.5 + Math.random() * 0.3, vol: 0.8 });
     this.game.onDeath(this, src);
   }
 
@@ -617,7 +658,11 @@ export class NPC {
         const e = this.eye;
         const want = Math.atan2(th.x - e.x, th.z - e.z);
         const off = Math.abs(wrap(want - this.aimYaw));
-        if (off < 0.12 && this.fireCD <= 0) {
+        if (off < 0.12 && this.fireCD <= 0 && this.lineBlockedByFriend(th)) {
+          // seitlich versetzen statt durch Kollegen/Geiseln zu schiessen
+          if (!this.path) { const a = this.aimYaw + (Math.random() < 0.5 ? 1.57 : -1.57); this.setGoal(this.pos.x + Math.sin(a) * 1.2, this.pos.z + Math.cos(a) * 1.2, true); }
+          this.fireCD = 0.4;
+        } else if (off < 0.12 && this.fireCD <= 0) {
           if (this.burstLeft <= 0) this.burstLeft = Math.round(rnd(this.weapon.burst[0], this.weapon.burst[1]));
           this.fire();
           this.burstLeft--;
@@ -781,9 +826,16 @@ export class NPC {
     const R = this.ragdoll;
     if (!R) return;
     R.step(dt);
+    while (R.events.length) {
+      const e = R.events.shift();
+      if (e.step) { this.game.audio.play('step_concrete', { pos: new V(e.x, 0.1, e.z), vol: 0.35, ref: 2 }); continue; }
+      const heavy = e.joint !== J.H;
+      this.game.audio.play('bodyfall', { pos: new V(e.x, 0.2, e.z), vol: Math.min(1.2, (heavy ? 0.55 : 0.3) + e.speed * 0.12), rate: heavy ? 0.85 : 1.15, ref: 3 });
+      if (heavy) this.game.fx.impact('dust', new V(e.x, 0.05, e.z), new V(0, 1, 0), new V(0, -1, 0), true);
+    }
     if (!R.asleep || !this._finalPose) {
       this.joints.set(R.p);
-      this.body.update(this.joints, null);
+      this.body.update(this.joints, null, true);
       if (R.asleep) {
         this._finalPose = true;
         // Blutlache
