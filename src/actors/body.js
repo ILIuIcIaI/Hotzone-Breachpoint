@@ -149,7 +149,7 @@ export class SkinnedBody {
       mk(look.pants, 0.95, den && den.map, den && den.normal),        // 2 Hose
       mk(look.shoes ?? 0x151515, 0.65),                               // 3 Schuhe
       mk(look.gloves ?? look.skin, look.gloves ? 0.75 : 0.62),        // 4 Haende
-      mk(look.head === 'balaclava' ? 0x141516 : (look.hair ?? 0x1a1410), 0.95, fab && fab.map, fab && fab.normal), // 5 Maske/Haare
+      mk((look.head === 'balaclava' || look.mask) ? 0x141516 : (look.hair ?? 0x1a1410), 0.95, fab && fab.map, fab && fab.normal), // 5 Maske/Haare
       mk(0x2a2d27, 0.9, fab && fab.map, fab && fab.normal),           // 6 Weste
       mk(0x161616, 0.55, null, null, 0.2),                            // 7 Guertel/Riemen
       mk(look.tie ?? 0x7a1f2a, 0.6),                                  // 8 Krawatte/Akzent
@@ -204,7 +204,7 @@ export class SkinnedBody {
 
   buildBody(P, look, opts) {
     const SKIN = 0, TOP = 1, PANTS = 2, SHOES = 3, HANDS = 4, HAIR = 5, VEST = 6, STRAP = 7, ACC = 8, EYE = 9;
-    const susp = look.head === 'balaclava' || look.head === 'cap';
+    const susp = (look.head === 'balaclava' || look.mask) || look.head === 'cap';
     const bulk = susp ? 1.06 : 1.0;
     // ---------- Rumpf ----------
     const Pp = this.rj(J.P), Np = this.rj(J.N), Cp = this.rj(J.C);
@@ -236,7 +236,7 @@ export class SkinnedBody {
     // ---------- Hals & Kopf ----------
     const Hp = this.rj(J.H);
     const nf = this.rf(B.neck);
-    loft(susp && look.head === 'balaclava' ? P[HAIR] : P[SKIN], [0, 0.5, 1].map((t) => ({
+    loft(susp && (look.head === 'balaclava' || look.mask) ? P[HAIR] : P[SKIN], [0, 0.5, 1].map((t) => ({
       c: Np.clone().lerp(Hp, t * 0.8).addScaledVector(nf.y, -0.03), x: nf.x, z: nf.z, rx: 0.05 - t * 0.008, rz: 0.052 - t * 0.006, w: lerpW(B.neck, B.head, sm(0.4, 1, t)),
     })), 12, 2, false, false, 1);
     const hf = this.rf(B.head);
@@ -251,15 +251,15 @@ export class SkinnedBody {
       if (z > 0.05 && Math.abs(y + 0.0) < 0.03 && Math.abs(x) < 0.045) z -= 0.008 * (1 - Math.abs(y) / 0.03); // Augenhoehlen leicht
       hp.setXYZ(i, x, y, z);
     }
-    P[look.head === 'balaclava' ? HAIR : SKIN].addGeo(head, headM, B.head);
+    P[(look.head === 'balaclava' || look.mask) ? HAIR : SKIN].addGeo(head, headM, B.head);
     // Nase, Ohren
     const nose = new THREE.ConeGeometry(0.014, 0.04, 8); nose.rotateX(Math.PI * 0.62);
-    P[look.head === 'balaclava' ? HAIR : SKIN].addGeo(nose, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, -0.018, 0.094)), B.head);
+    P[(look.head === 'balaclava' || look.mask) ? HAIR : SKIN].addGeo(nose, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, -0.018, 0.094)), B.head);
     for (const s of [-1, 1]) {
       const ear = new THREE.SphereGeometry(0.022, 8, 6); ear.scale(0.4, 1, 0.75);
-      P[look.head === 'balaclava' ? HAIR : SKIN].addGeo(ear, headM.clone().multiply(new THREE.Matrix4().makeTranslation(s * 0.087, -0.005, -0.005)), B.head);
+      P[(look.head === 'balaclava' || look.mask) ? HAIR : SKIN].addGeo(ear, headM.clone().multiply(new THREE.Matrix4().makeTranslation(s * 0.087, -0.005, -0.005)), B.head);
     }
-    if (look.head === 'balaclava') {
+    if ((look.head === 'balaclava' || look.mask)) {
       // Augenschlitz: Hautstreifen + Augen
       const slit = new THREE.CapsuleGeometry(0.016, 0.06, 4, 8); slit.rotateZ(Math.PI / 2);
       P[SKIN].addGeo(slit, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.012, 0.088)).multiply(new THREE.Matrix4().makeScale(1, 1, 0.5)), B.head);
@@ -273,6 +273,18 @@ export class SkinnedBody {
       const hpos = hair.attributes.position;
       for (let i = 0; i < hpos.count; i++) { hpos.setX(i, hpos.getX(i) * 0.9); hpos.setY(i, hpos.getY(i) * 1.12); if (hpos.getZ(i) > 0.06 && hpos.getY(i) < 0.07) hpos.setY(i, hpos.getY(i) + 0.012); }
       P[HAIR].addGeo(hair, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.012, -0.004)), B.head);
+    }
+    if (look.head === 'helmet') {
+      const helm = new THREE.SphereGeometry(0.122, 22, 12, 0, Math.PI * 2, 0, Math.PI * 0.56); helm.scale(0.92, 1.0, 1.05);
+      P[VEST].addGeo(helm, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.022, -0.006)), B.head);
+      const rim = new THREE.TorusGeometry(0.112, 0.01, 6, 24); rim.rotateX(Math.PI / 2); rim.scale(0.93, 1, 1.06);
+      P[STRAP].addGeo(rim, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.012, -0.004)), B.head);
+      for (const s of [-1, 1]) {
+        const cup = new THREE.CylinderGeometry(0.035, 0.035, 0.03, 12); cup.rotateZ(Math.PI / 2);
+        P[STRAP].addGeo(cup, headM.clone().multiply(new THREE.Matrix4().makeTranslation(s * 0.1, -0.005, -0.005)), B.head);
+      }
+      const mount = new RoundedBoxGeometry(0.05, 0.03, 0.02, 1, 0.006);
+      P[STRAP].addGeo(mount, headM.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.1, 0.1)), B.head);
     }
     if (look.head === 'cap') {
       const cap = new THREE.SphereGeometry(0.108, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5); cap.scale(0.9, 1.0, 1.0);

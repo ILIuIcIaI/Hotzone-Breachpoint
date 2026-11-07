@@ -98,7 +98,7 @@ export class Player {
     G.world.resolveCircle(np, 0.3, 0.15, height);
     for (const n of G.npcs) {
       const dx = np.x - n.pos.x, dz = np.z - n.pos.z, d2 = dx * dx + dz * dz;
-      const r = n.alive ? 0.55 : 0;
+      const r = n.alive && n.type !== 'officer' ? 0.55 : 0;
       if (r && d2 < r * r && d2 > 1e-6) { const d = Math.sqrt(d2), s = (r - d) / d; np.x += dx * s; np.z += dz * s; }
     }
     const moved = Math.hypot(np.x - this.pos.x, np.z - this.pos.z);

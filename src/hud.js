@@ -49,9 +49,9 @@ export class HUD {
     while (this.feed.children.length > 6) this.feed.firstChild.remove();
   }
 
-  subtitle(text, who) {
-    const col = who === 'player' ? '#9fd0ff' : who === 'suspect' ? '#ffb38a' : who === 'hostage' || who === 'civilian' ? '#e9e3c8' : '#ddd';
-    const name = who === 'player' ? 'Du' : who === 'suspect' ? 'Verdächtiger' : who === 'hostage' ? 'Geisel' : who === 'civilian' ? 'Zivilist' : 'Funk';
+  subtitle(text, who, label) {
+    const col = who === 'player' ? '#9fd0ff' : who === 'team' ? '#7fd38a' : who === 'radio' ? '#e8b04a' : who === 'suspect' ? '#ffb38a' : who === 'hostage' || who === 'civilian' ? '#e9e3c8' : '#ddd';
+    const name = label || (who === 'player' ? 'Du' : who === 'radio' ? 'Einsatzleitung' : who === 'team' ? 'Team' : who === 'suspect' ? 'Verdächtiger' : who === 'hostage' ? 'Geisel' : who === 'civilian' ? 'Zivilist' : 'Funk');
     this.sub.innerHTML = `<span style="color:${col};font-weight:600">${name}:</span> ${text}`;
     this.sub.style.opacity = '1';
     this.subT = 2.8;

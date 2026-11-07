@@ -12,6 +12,7 @@ import { LightBaker } from './world/lighting.js';
 import { NavGrid } from './world/nav.js';
 import { buildDoorMesh } from './world/doors.js';
 import { NPC } from './actors/npc.js';
+import { Officer } from './actors/officer.js';
 import { Player } from './player/player.js';
 import { ViewModel, GUNS } from './player/viewmodel.js';
 import { Effects } from './fx/effects.js';
@@ -34,7 +35,7 @@ export class Game {
     this.speech = new Speech();
     this.speech.enabled = settings.voice;
     this.hud = new HUD();
-    this.speech.onSubtitle = (t, who) => this.hud.subtitle(t, who);
+    this.speech.onSubtitle = (t, who, name) => this.hud.subtitle(t, who, name);
     this.speech.onRadio = () => this.audio.play('radio', { vol: 0.5, verb: 0, jitter: false });
     this.npcs = [];
     this.nades = [];
@@ -239,6 +240,9 @@ export class Game {
     SPAWNS.suspects.forEach((s, i) => this.npcs.push(new NPC(this, s, 'suspect', i)));
     SPAWNS.hostages.forEach((s, i) => this.npcs.push(new NPC(this, s, 'hostage', i)));
     SPAWNS.civilians.forEach((s, i) => this.npcs.push(new NPC(this, s, 'civilian', i)));
+    this.officers = [new Officer(this, { x: 22.9, z: -9.6, yaw: 0 }, 0), new Officer(this, { x: 25.1, z: -9.6, yaw: 0 }, 1)];
+    this.npcs.push(...this.officers);
+    this.teamHold = null;
     for (const c of this.nav.covers) c.used = null;
     for (const d of this.world.doors) { d.open = 0; d.target = 0; d.broken = false; if (d.glassMesh) d.glassMesh.visible = true; d._upd(); if (d.mesh) d.mesh.rotation.y = -d.angle; }
     for (const b of this.glassPanes || []) { if (b.broken) { b.broken = false; b.min = [...b.orig.min]; b.max = [...b.orig.max]; b.glassMesh.visible = true; } }
@@ -302,9 +306,18 @@ export class Game {
   // ---------------- Ereignisse von NPCs ----------------
   onDeath(npc, src) {
     const S = this.stats;
+    if (npc.type === 'officer') {
+      S.officersDown = (S.officersDown || 0) + 1;
+      this.hud.toast(npc.name + ' ausgefallen!', 'bad');
+      const other = (this.officers || []).find((o) => o !== npc && o.alive);
+      if (other) other.game.speech.say(npc.name + ' ist getroffen! Mann am Boden!', { type: 'team', prio: 5, who: 900 + other.slot, name: other.name });
+      else this.speech.say('Einsatzleitung an Alpha: Team ausgefallen, Sie sind auf sich allein gestellt.', { type: 'radio', prio: 5 });
+      return;
+    }
+    if (npc.type === 'suspect' && npc.lastAttacker && npc.lastAttacker.type === 'officer' && npc.lastAttacker.alive) npc.lastAttacker.callout('kill', null, 3);
     if (npc.type === 'suspect') {
       S.kills++;
-      if (npc.state === 'dead' && npc.surrendered && !npc.fake) { S.penalties++; this.hud.toast('Unerlaubte Gewalt: Verdächtiger hatte sich ergeben', 'bad'); }
+      if (npc.state === 'dead' && npc.surrendered && !npc.fake && npc.t - (npc.surrenderT ?? -99) > 1.2) { S.penalties++; this.hud.toast('Unerlaubte Gewalt: Verdächtiger hatte sich ergeben', 'bad'); }
       else this.hud.toast('Verdächtiger neutralisiert');
     } else if (npc.type === 'hostage') { S.hostageKilled++; this.hud.toast('Geisel getötet!', 'bad'); }
     else { S.civKilled++; this.hud.toast('Zivilist getötet!', 'bad'); }
@@ -427,7 +440,8 @@ export class Game {
     if (target && target.player) {
       P.damage(W.dmg, target.zone, dir);
     } else if (target && target.npc) {
-      target.npc.damage(W.dmg * 0.8, target.h.zone, dir.clone(), end, target.h.joint, muzzle);
+      target.npc.lastAttacker = npc;
+      target.npc.damage(W.dmg * (npc.type === 'officer' ? 1 : 0.8), target.h.zone, dir.clone(), end, target.h.joint, muzzle);
     } else if (wh && wh.mat === 'glass') {
       this.breakGlass(wh, end, dir);
     } else if (wh) {
@@ -611,11 +625,13 @@ export class Game {
       this.audio.play('cuff', { pos: t.npc.chestPos(new V()), vol: 0.6, rate: 0.8 });
       t.npc.say('hostageFree', 3, true);
       this.hud.toast('Geisel befreit');
+      this.speech.say(S.hostages >= SPAWNS.hostages.length ? 'Einsatzleitung: Alle Geiseln in Sicherheit. Sehr gute Arbeit.' : 'Einsatzleitung: Verstanden, Geisel in Sicherheit.', { type: 'radio', prio: 4 });
     } else if (t.kind === 'evidence') {
       S.evidence = true;
       this.laptop.visible = false;
       this.audio.play('radio', { vol: 0.7, verb: 0 });
       this.hud.toast('Beweismittel gesichert', 'info');
+      this.speech.say('Einsatzleitung: Beweismittel bestätigt. Danke, Alpha.', { type: 'radio', prio: 4 });
     }
     this.checkComplete();
   }
@@ -706,6 +722,11 @@ export class Game {
       if (I.hit('Tab')) this.hud.objectives.classList.remove('hidden');
       if (I.up('Tab')) this.hud.objectives.classList.add('hidden');
       if (this.stats.complete && I.hit('Enter')) this.finish(true);
+      if (I.hit('KeyH') && this.officers) {
+        const alive = this.officers.filter((o) => o.alive);
+        if (this.teamHold) { this.teamHold = null; alive[0] && alive[0].callout('follow', null, 3); this.hud.toast('Team: folgen', 'info'); }
+        else { this.teamHold = { x: P.pos.x, z: P.pos.z }; alive[0] && alive[0].callout('hold', null, 3); this.hud.toast('Team: Position halten', 'info'); }
+      }
     }
     for (const n of this.npcs) { n.update(dt); if (n.droppedGun) n.updateDroppedGun(dt); }
     for (const d of this.world.doors) d.update(dt, this.time);

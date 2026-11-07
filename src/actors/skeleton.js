@@ -189,6 +189,10 @@ export const LOOKS = {
     { top: 0x36432f, pants: 0x34383c, shoes: 0x121212, head: 'cap', skin: 0xc49a7c, vest: false, gloves: null },
     { top: 0x6e2a2c, pants: 0x2c3546, shoes: 0x141414, head: 'balaclava', skin: 0xa6765a, vest: false, gloves: 0x1a1a1a },
   ],
+  officer: [
+    { top: 0x232b38, pants: 0x232b38, shoes: 0x101010, head: 'helmet', mask: true, skin: 0xc69c7e, gloves: 0x151515, vest: true },
+    { top: 0x232b38, pants: 0x232b38, shoes: 0x101010, head: 'helmet', mask: true, skin: 0x9a6a50, gloves: 0x151515, vest: true },
+  ],
   hostage: [
     { top: 0xc9ced6, pants: 0x2c3442, shoes: 0x2a1c12, head: 'hair', skin: 0xd8b294, hair: 0x3b2a1e, tie: 0x7a1f2a },
     { top: 0x8aa3c2, pants: 0x3a3a3e, shoes: 0x111111, head: 'hair', skin: 0xb98a6c, hair: 0x101010 },

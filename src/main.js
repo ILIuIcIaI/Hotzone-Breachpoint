@@ -4,6 +4,8 @@ import { Game } from './game.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const TEST = params.has('test');
+// Tests/Aufnahmen: keine Sprachausgabe ueber die Lautsprecher (Windows-Stimmen laufen am Browser-Ton vorbei)
+const MUTE = TEST || params.has('autoplay') || params.has('mute');
 
 function loadSettings() {
   let s = {};
@@ -18,6 +20,7 @@ $('opt-quality').value = settings.quality;
 $('opt-sens').value = settings.sens; $('opt-fov').value = settings.fov; $('opt-vol').value = settings.vol;
 $('opt-voice').value = settings.voice ? '1' : '0'; $('opt-dot').value = settings.dot ? '1' : '0';
 
+if (MUTE) { settings.voice = false; settings.vol = 0; }
 const game = new Game($('game'), settings);
 window.HB = game;
 let loaded = false, started = false;

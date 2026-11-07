@@ -12,6 +12,7 @@ const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI)
 const pick = (a) => a[(Math.random() * a.length) | 0];
 const rnd = (a, b) => a + Math.random() * (b - a);
 
+export { WEAPONS };
 export const LINES = {
   spotted: ['Da ist einer!', 'Bullen! Bullen!', 'Kontakt!', 'Die Polizei ist drin!', 'Da vorne!'],
   hurt: ['Ah! Ich bin getroffen!', 'Scheiße!', 'Argh!'],
@@ -32,6 +33,7 @@ const WEAPONS = {
   rifle: { rpm: 620, burst: [3, 5], pause: [0.45, 1.0], mag: 30, dmg: 27, spread: 0.7, snd: 'rifle' },
   smg: { rpm: 820, burst: [4, 8], pause: [0.4, 0.8], mag: 30, dmg: 20, spread: 1.4, snd: 'smg' },
   pistol: { rpm: 330, burst: [1, 3], pause: [0.35, 0.8], mag: 15, dmg: 22, spread: 1.1, snd: 'pistol' },
+  carbine: { rpm: 500, burst: [2, 3], pause: [0.3, 0.55], mag: 30, dmg: 42, spread: 0.45, snd: 'rifle' },
 };
 
 let NPC_ID = 0;
@@ -83,12 +85,15 @@ export class NPC {
       this.state = spec.patrol ? 'patrol' : 'idle';
       this.hasGun = true;
       this.hiddenPistol = Math.random() < 0.5;
+    } else if (type === 'officer') {
+      this.weaponKind = 'carbine'; this.weapon = WEAPONS.carbine; this.ammo = 30;
+      this.stance = 'rifle'; this.state = 'follow'; this.hasGun = true; this.armor = true; this.skill = 0.8;
     } else if (type === 'hostage') {
       this.stance = 'tied'; this.state = 'tied'; this.hasGun = false;
     } else {
       this.stance = 'cower'; this.state = 'hide'; this.hasGun = false; this.crouchT = 0.5;
     }
-    const looks = LOOKS[type === 'suspect' ? 'suspect' : type === 'hostage' ? 'hostage' : 'civilian'];
+    const looks = LOOKS[type === 'suspect' || type === 'officer' || type === 'hostage' ? type : 'civilian'];
     const look = { ...looks[lookIdx % looks.length] };
     if (this.armor) look.vest = true;
     this.body = new SkinnedBody(look, { armor: this.armor, textures: game.T });
@@ -144,8 +149,25 @@ export class NPC {
   }
 
   // ---------------- Wahrnehmung ----------------
+  pickAgent() {
+    const P = this.game.player, offs = this.game.officers || [];
+    if (!offs.length) return P;
+    const e = this.eye, W = this.game.world;
+    let best = P.alive ? P : null, bd = P.alive ? Math.hypot(P.pos.x - this.pos.x, P.pos.z - this.pos.z) : 1e9;
+    let bv = P.alive && W.los(e.x, e.y, e.z, P.chestPos.x, P.chestPos.y, P.chestPos.z);
+    for (const o of offs) {
+      if (!o.alive) continue;
+      const a = o.agent, d = Math.hypot(a.pos.x - this.pos.x, a.pos.z - this.pos.z);
+      if (d > 45) continue;
+      const v = W.los(e.x, e.y, e.z, a.chestPos.x, a.chestPos.y, a.chestPos.z);
+      if ((v && !bv) || (v === bv && d < bd)) { best = a; bd = d; bv = v; }
+    }
+    return best || P;
+  }
+
   perceive(dt) {
-    const P = this.game.player;
+    const P = this.pickAgent();
+    this.threatAgent = P;
     if (!P.alive || this.type !== 'suspect' || this.state === 'surrender' && !this.fake || this.arrested) { this.threat.visible = false; return; }
     if (this.stunT > 0) { this.threat.visible = false; return; }
     const eye = this.eye;
@@ -472,6 +494,7 @@ export class NPC {
   surrender(fake) {
     this.state = 'surrender';
     this.surrendered = true;
+    this.surrenderT = this.t;
     this.fake = fake;
     this.fakeT = 0;
     this.path = null;
@@ -694,7 +717,7 @@ export class NPC {
     const G = this.gunInfo;
     const muzzle = _w.copy(this.gun.userData.muzzle).applyMatrix4(this.gun.matrix);
     const th = this.threat;
-    const P = this.game.player;
+    const P = this.threatAgent || this.game.player;
     // Streuung: abhaengig von Distanz, Zielzeit, Unterdrueckung, Verletzung, Bewegung des Spielers
     const dist = Math.hypot(th.x - muzzle.x, th.z - muzzle.z);
     const settle = Math.max(0, 1 - this.aimT / (1.6 - this.skill));

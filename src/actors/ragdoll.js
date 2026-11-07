@@ -49,10 +49,10 @@ export class Ragdoll {
     const head = hit.zone === 'head', leg = hit.zone === 'leg';
     // ---- Nervensystem-Parameter (jedes Mal etwas anders) ----
     this.tone = head ? 0 : 1;
-    this.balanceT = head ? 0 : leg ? rnd(0.15, 0.35) : rnd(0.55, 1.4);   // wie lange er sich auf den Beinen haelt
-    this.stepsLeft = head ? 0 : leg ? 1 : Math.round(rnd(1, 4));
+    this.balanceT = head ? 0 : leg ? rnd(0.12, 0.3) : rnd(0.35, 0.85);   // wie lange er sich auf den Beinen haelt
+    this.stepsLeft = head ? 0 : leg ? 1 : Math.round(rnd(1, 2.4));
     this.hunch = head ? 0 : hit.zone === 'torso' ? rnd(0.35, 0.7) : rnd(0.1, 0.3); // Kruemmung um die Wunde
-    this.writheT = !head && Math.random() < 0.7 ? rnd(1.5, 4.5) : 0;
+    this.writheT = !head && Math.random() < 0.5 ? rnd(1.2, 2.8) : 0;
     this.legHit = leg ? (hit.joint === J.KL || hit.joint === J.FL ? 'L' : 'R') : null;
     this.phase = head ? 'fall' : 'balance';
     this.standH = this.p[J.P * 3 + 1];
@@ -139,7 +139,8 @@ export class Ragdoll {
     // Integration mit Geschwindigkeitsbegrenzung
     for (let i = 0; i < NJ; i++) {
       const ix = i * 3;
-      let vx = (p[ix] - o[ix]) * 0.998, vy = (p[ix + 1] - o[ix + 1]) * 0.998, vz = (p[ix + 2] - o[ix + 2]) * 0.998;
+      const dmp = this.phase === 'limp' ? 0.995 : 0.985;
+      let vx = (p[ix] - o[ix]) * dmp, vy = (p[ix + 1] - o[ix + 1]) * dmp, vz = (p[ix + 2] - o[ix + 2]) * dmp;
       const sp = Math.hypot(vx, vy, vz);
       if (sp > MAXD) { const s = MAXD / sp; vx *= s; vy *= s; vz *= s; }
       o[ix] = p[ix]; o[ix + 1] = p[ix + 1]; o[ix + 2] = p[ix + 2];
@@ -172,8 +173,9 @@ export class Ragdoll {
     } else if (this.phase === 'fall') {
       this.tone = Math.max(0, this.tone - h * 1.4);
       if (chestY < 0.32 && pelvisY < 0.3) this.phase = this.writheT > 0 ? 'writhe' : 'limp', this.groundT = this.t;
-      if (this.t > 4) this.phase = 'limp';
+      if (this.t > 3) this.phase = 'limp';
     } else if (this.phase === 'writhe') {
+      if (this.t > 6) this.phase = 'limp';
       if (this.t - this.groundT > this.writheT) this.phase = 'limp';
     }
     if (this.phase === 'balance') this.balance(h, F, c);
@@ -194,7 +196,7 @@ export class Ragdoll {
     const tone = this.tone;
     // Beine stuetzen das Becken (mit nachlassender Kraft), getroffenes Bein knickt ein
     const hT = this.standH * (0.98 - (1 - tone) * 0.3);
-    const lift = (hT - p[J.P * 3 + 1]) * 0.22 * tone;
+    const lift = (hT - p[J.P * 3 + 1]) * 0.12 * tone;
     if (lift > 0) { p[J.P * 3 + 1] += lift; p[J.C * 3 + 1] += lift * 0.9; p[J.N * 3 + 1] += lift * 0.85; }
     // Capture-Point
     const cpx = c.x + c.vx * 0.3, cpz = c.z + c.vz * 0.3;
@@ -261,7 +263,7 @@ export class Ragdoll {
     const ux = Math.sin(ang) * lx, uy = Math.cos(ang), uz = Math.sin(ang) * lz;
     const P = J.P * 3;
     const tgt = (j, d) => [p[P] + ux * d, p[P + 1] + uy * d, p[P + 2] + uz * d];
-    const k = 0.16 * tone;
+    const k = 0.055 * tone * tone;
     for (const [j, d, kk] of [[J.C, 0.45, 1], [J.N, 0.55, 0.9], [J.H, 0.66, 0.7]]) {
       const [tx, ty, tz] = tgt(j, d);
       const ix = j * 3;
@@ -271,7 +273,7 @@ export class Ragdoll {
     for (const j of [J.EL, J.ER, J.HL, J.HR]) {
       const lx2 = this.local[j * 3], ly2 = this.local[j * 3 + 1], lz2 = this.local[j * 3 + 2];
       const tx = F.o.x + F.x.x * lx2 + F.y.x * ly2 + F.z.x * lz2, ty = F.o.y + F.x.y * lx2 + F.y.y * ly2 + F.z.y * lz2, tz = F.o.z + F.x.z * lx2 + F.y.z * ly2 + F.z.z * lz2;
-      const kk = 0.05 * tone;
+      const kk = 0.02 * tone;
       p[j * 3] += (tx - p[j * 3]) * kk; p[j * 3 + 1] += (ty - p[j * 3 + 1]) * kk; p[j * 3 + 2] += (tz - p[j * 3 + 2]) * kk;
     }
     // Kopf schuetzen beim Fallen nach hinten: Kinn zur Brust
@@ -288,7 +290,7 @@ export class Ragdoll {
     const cl = this.clutch;
     const clutchOn = cl && this.t < cl.until && this.phase !== 'limp';
     if (clutchOn) {
-      const w = Math.min(1, this.t * 5) * 0.2;
+      const w = Math.min(1, this.t * 4) * 0.08;
       const [lx, ly, lz] = cl.lp;
       const tx = F.o.x + F.x.x * lx + F.y.x * ly + F.z.x * lz, ty = F.o.y + F.x.y * lx + F.y.y * ly + F.z.y * lz, tz = F.o.z + F.x.z * lx + F.y.z * ly + F.z.z * lz;
       for (const hand of [cl.hand, cl.hand2]) {
@@ -304,13 +306,13 @@ export class Ragdoll {
       if (this.phase === 'balance') {
         // Rudern: Arm seitlich gegen die Kipprichtung heben
         const c = this._com;
-        tx = p[J.C * 3] + F.x.x * side * 0.45 - c.vx * 0.12; ty = p[J.C * 3 + 1] - 0.05 + Math.sin(this.t * 9 + side) * 0.06; tz = p[J.C * 3 + 2] + F.x.z * side * 0.45 - c.vz * 0.12;
-        w = 0.06 * this.tone;
+        tx = p[J.C * 3] + F.x.x * side * 0.45 - c.vx * 0.12; ty = p[J.C * 3 + 1] - 0.12; tz = p[J.C * 3 + 2] + F.x.z * side * 0.45 - c.vz * 0.12;
+        w = 0.025 * this.tone;
       } else if (this.phase === 'fall' && vcy < -0.8 && p[J.C * 3 + 1] < 1.2) {
         // Sturz abfangen: Haende Richtung Boden in Fallrichtung
         const vx = p[J.C * 3] - o[J.C * 3], vz = p[J.C * 3 + 2] - o[J.C * 3 + 2], vl = Math.hypot(vx, vz) || 1;
         tx = p[J.C * 3] + vx / vl * 0.45 + F.x.x * side * 0.2; ty = 0.05; tz = p[J.C * 3 + 2] + vz / vl * 0.45 + F.x.z * side * 0.2;
-        w = 0.07 * Math.max(0.3, this.tone);
+        w = 0.035 * Math.max(0.3, this.tone);
       } else continue;
       p[hand * 3] += (tx - p[hand * 3]) * w; p[hand * 3 + 1] += (ty - p[hand * 3 + 1]) * w; p[hand * 3 + 2] += (tz - p[hand * 3 + 2]) * w;
     }
@@ -320,15 +322,15 @@ export class Ragdoll {
   writhe(h, F) {
     const p = this.p;
     const k = Math.max(0, 1 - (this.t - this.groundT) / this.writheT);
-    const s = this.t * 2.2;
+    const s = this.t * 0.9;
     for (const [hp, kn, ft, ph] of [[J.HPL, J.KL, J.FL, 0], [J.HPR, J.KR, J.FR, 1.9]]) {
-      const pull = (Math.sin(s + ph) * 0.5 + 0.5) * 0.06 * k;
+      const pull = (Math.sin(s + ph) * 0.5 + 0.5) * 0.008 * k;
       // Knie Richtung Brust ziehen
       const tx = p[J.C * 3], tz = p[J.C * 3 + 2];
       p[kn * 3] += (tx - p[kn * 3]) * pull; p[kn * 3 + 2] += (tz - p[kn * 3 + 2]) * pull;
       p[ft * 3] += (p[hp * 3] - p[ft * 3]) * pull * 0.6; p[ft * 3 + 2] += (p[hp * 3 + 2] - p[ft * 3 + 2]) * pull * 0.6;
     }
-    p[J.H * 3 + 1] += 0.0012 * k * (Math.sin(s * 0.7) * 0.5 + 0.5);
+
     if (this.clutch) this.clutch.until = Math.max(this.clutch.until, this.t + 0.1);
     if (k <= 0 && this.clutch) this.clutch.until = 0;
   }

@@ -1,6 +1,6 @@
 # Hotzone Breachpoint
 
-Taktischer SWAT-Shooter für Windows, inspiriert von *Ready or Not*. Ein einzelner Einsatzbeamter räumt ein besetztes Bürogebäude Raum für Raum: Verdächtige anrufen, festnehmen oder ausschalten, Geiseln befreien, Beweise sichern. Wer auf Ergebene schießt, verstößt gegen die Einsatzregeln.
+Taktischer SWAT-Shooter für Windows, inspiriert von *Ready or Not*. Ein dreiköpfiges Einsatzteam räumt ein besetztes Bürogebäude Raum für Raum: Verdächtige anrufen, festnehmen oder ausschalten, Geiseln befreien, Beweise sichern. Wer auf Ergebene schießt, verstößt gegen die Einsatzregeln.
 
 [![Gameplay-Video ansehen](docs/media/gameplay-poster.jpg)](docs/media/gameplay.mp4)
 *Gameplay-Video (2 Minuten): Bild anklicken.*
@@ -9,6 +9,7 @@ Taktischer SWAT-Shooter für Windows, inspiriert von *Ready or Not*. Ein einzeln
 |---|---|
 | ![](docs/screenshots/02_breach.jpg) | ![](docs/screenshots/06_takedown.jpg) |
 | ![](docs/screenshots/05_hostages.jpg) | ![](docs/screenshots/03_server.jpg) |
+| ![](docs/screenshots/11_team.jpg) | ![](docs/screenshots/12_ragdoll.jpg) |
 | ![](docs/screenshots/08_lean.jpg) | ![](docs/screenshots/07_approach.jpg) |
 
 Download: [Releases](../../releases/latest)
@@ -20,6 +21,8 @@ Download: [Releases](../../releases/latest)
 **Bewegung:** Lehnen um Ecken mit Kollisionsprüfung, Ducken, Schleichen, Sprinten mit Ausdauer, träges Beschleunigen. Schrittgeräusche hängen vom Boden ab und sind für die KI hörbar.
 
 **Gegner-KI:** Wahrnehmung über Sichtkegel, Lichtverhältnisse und Gehör; die Reaktionszeit hängt von Entfernung und Können ab. Gegner suchen Deckung, tauchen zum Schießen auf, halten Winkel oder rücken vor (höchstens zwei gleichzeitig), weichen aus der Schusslinie und schießen nicht durch eigene Leute oder Geiseln. Auf Anruf ergeben sie sich, je nach Moral, Verletzung und Lage. Manche täuschen das Aufgeben nur vor.
+
+**Team:** Zwei KI-Kollegen (Alpha 2 und 3) folgen in Formation oder halten auf Befehl Position. Sie rufen Verdächtige an, bevor sie schießen, bekämpfen Bedrohungen, nehmen Ergebene fest und melden über Funk Kontakte, Abschüsse, Geiseln, Festnahmen und geräumte Räume. Die Einsatzleitung meldet sich mit eigener Stimme.
 
 **Aktive Ragdolls (Euphoria-Prinzip):** Getroffene versuchen, das Gleichgewicht zu halten. Sie setzen Ausfallschritte zum Kipp-Punkt ihres Schwerpunkts, krümmen sich um die Wunde und greifen danach, während der freie Arm rudert. Mit nachlassender Muskelkraft knicken die Knie ein, der Sturz wird mit den Händen abgefangen, am Boden krümmen sie sich noch kurz. Kopftreffer führen zum sofortigen Zusammensacken.
 
@@ -41,6 +44,7 @@ Download: [Releases](../../releases/latest)
 | 1 / 2 · G | Karabiner / Pistole · Blendgranate |
 | F tippen / halten | Rufen bzw. Tür · Festnehmen, Geisel befreien, Beweis sichern |
 | Mausrad · V | Tür langsam öffnen · Tür eintreten |
+| H | Team: Position halten / folgen |
 | Tab · Esc · F11 · F3 | Einsatzziele · Pause · Vollbild · FPS |
 
 ## Technik

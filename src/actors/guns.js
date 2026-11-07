@@ -33,6 +33,19 @@ export function buildNpcGun(kind) {
     rb(g, M.poly, 0.008, 0.008, 0.05, 0, 0.0, 0.05);                              // Buegel
     cyl(g, M.steel, 0.006, 0.006, 0.01, 0, 0.05, 0.157, 8);
     g.userData.muzzle = new THREE.Vector3(0, 0.05, 0.16); g.userData.length = 0.2;
+  } else if (kind === 'carbine') {
+    rb(g, M.black, 0.046, 0.058, 0.26, 0, 0.05, 0.1, 0, 0, 0, 0.008);              // Gehaeuse
+    rb(g, M.poly, 0.05, 0.05, 0.3, 0, 0.055, 0.37, 0, 0, 0, 0.012);                // Handschutz
+    rb(g, M.steel, 0.022, 0.012, 0.5, 0, 0.09, 0.22);                              // Schiene
+    cyl(g, M.steel, 0.01, 0.01, 0.14, 0, 0.055, 0.58, 8);
+    cyl(g, M.black, 0.014, 0.014, 0.05, 0, 0.055, 0.66, 8);
+    rb(g, M.poly, 0.03, 0.1, 0.045, 0, -0.025, 0.0, -0.3, 0, 0, 0.01);             // Griff
+    rb(g, M.black, 0.027, 0.15, 0.065, 0, -0.04, 0.14, 0.15, 0, 0, 0.006);         // Magazin
+    cyl(g, M.black, 0.015, 0.015, 0.18, 0, 0.06, -0.1, 8);                        // Puffer
+    rb(g, M.poly, 0.042, 0.07, 0.12, 0, 0.045, -0.23, 0, 0, 0, 0.012);             // Schaft
+    cyl(g, M.black, 0.02, 0.02, 0.06, 0, 0.115, 0.15, 12);                        // Rotpunkt
+    cyl(g, M.black, 0.014, 0.014, 0.09, 0.035, 0.06, 0.42, 10);                   // Lampe
+    g.userData.muzzle = new THREE.Vector3(0, 0.055, 0.69); g.userData.length = 0.9;
   } else if (kind === 'smg') {
     rb(g, M.black, 0.045, 0.06, 0.3, 0, 0.055, 0.1, 0, 0, 0, 0.01);               // Gehaeuse
     rb(g, M.poly, 0.04, 0.04, 0.12, 0, 0.04, 0.27, 0, 0, 0, 0.012);               // Handschutz

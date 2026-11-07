@@ -14,8 +14,11 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
 app.whenReady().then(async () => {
   setTimeout(() => { console.error('devshot timeout'); app.exit(2); }, scen.timeout || 110000);
-  const win = new BrowserWindow({ width: scen.w || 1280, height: scen.h || 720, show: true, useContentSize: true, webPreferences: { backgroundThrottling: false } });
-  win.setMenuBarVisibility(false); win.setAlwaysOnTop(true, 'screen-saver');
+  const off = scen.visible !== true; // Standard: unsichtbar (Offscreen), nichts erscheint auf dem Desktop
+  const win = new BrowserWindow({ width: scen.w || 1280, height: scen.h || 720, show: !off, useContentSize: true, webPreferences: { backgroundThrottling: false, offscreen: off } });
+  if (off) win.webContents.setFrameRate(60);
+  win.webContents.setAudioMuted(true); // Tests sind immer stumm
+  win.setMenuBarVisibility(false); if (!off) win.setAlwaysOnTop(true, 'screen-saver');
   const logs = [];
   win.webContents.on('console-message', (e, level, msg) => { logs.push(`[${level}] ${msg}`); });
   await win.loadURL(scen.url || 'http://localhost:5180/?test');
